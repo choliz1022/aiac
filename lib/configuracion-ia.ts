@@ -1,7 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { ConfiguracionIA, ConfiguracionIAContext } from "@/types/configuracion-ia";
 
 export async function getConfiguracionIA(): Promise<ConfiguracionIA | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("configuracion_ia")
     .select(

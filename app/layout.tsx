@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import AppShell from "@/components/app-shell";
-import { getResumenSidebar } from "@/lib/resumen-sidebar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,19 +17,13 @@ export const metadata: Metadata = {
   description: "Asistente de actividades contractuales con IA",
 };
 
-export const dynamic = "force-dynamic";
-
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const resumenSidebar = await getResumenSidebar();
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">
-        <AppShell resumenSidebar={resumenSidebar}>{children}</AppShell>
-      </body>
+      <body className="min-h-full font-sans">{children}</body>
     </html>
   );
 }

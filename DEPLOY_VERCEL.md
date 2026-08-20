@@ -30,6 +30,9 @@ En el repositorio solo están migraciones incrementales en `supabase/migrations/
 | `002_add_contexto_tecnico.sql` | Columna `contexto_tecnico` |
 | `003_add_tipo_actividad_detectada.sql` | Columna `tipo_actividad_detectada` |
 | `004_add_clasificacion_manual.sql` | Columnas `clasificacion_manual`, `puntaje_clasificacion` |
+| `005_multiusuario_auth.sql` | `user_id`, RLS por usuario, triggers Auth |
+
+Ver también [`MULTIUSUARIO.md`](MULTIUSUARIO.md) para bootstrap de datos legacy y configuración de Supabase Auth.
 
 Ejecuta en el SQL Editor de Supabase las migraciones que aún no estén aplicadas.
 

@@ -1,5 +1,5 @@
 import RegistrarActividadForm from "@/components/registrar-actividad-form";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 type ContratoActivo = {
@@ -21,6 +21,7 @@ function contratoEstaCompleto(contrato: ContratoActivo): boolean {
 
 async function getContratoActivo(): Promise<ContratoActivo | null> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("contratos")
       .select("id, nombre, entidad, objeto_contractual, obligaciones")

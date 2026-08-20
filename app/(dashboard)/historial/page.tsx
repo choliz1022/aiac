@@ -1,7 +1,7 @@
 import HistorialActividades from "@/components/historial-actividades";
 import Link from "next/link";
 import { AUDITORIA_OBLIGACIONES_HREF } from "@/lib/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
 
 async function getActividades(): Promise<{
@@ -9,6 +9,7 @@ async function getActividades(): Promise<{
   error: string | null;
 }> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("actividades")
       .select(

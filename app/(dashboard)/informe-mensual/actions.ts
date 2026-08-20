@@ -9,7 +9,7 @@ import {
   MENSAJE_OBLIGACION_SIN_ACTIVIDADES,
   parseObligacionesContrato,
 } from "@/lib/informe-mensual";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
 import type {
   GenerarInformeResult,
@@ -23,6 +23,7 @@ type ContratoInforme = InformeMensualContrato & {
 };
 
 async function getContratoActivo(): Promise<ContratoInforme | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("contratos")
     .select("nombre, entidad, objeto_contractual, obligaciones")
@@ -41,6 +42,7 @@ async function getActividadesDelPeriodo(
   anio: number
 ): Promise<Actividad[]> {
   const { inicio, fin } = calcularRangoFechas(mes, anio);
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("actividades")

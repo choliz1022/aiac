@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { ConfiguracionIA, ConfiguracionIAFormData } from "@/types/configuracion-ia";
 
 type ConfiguracionIAFormProps = {
@@ -45,6 +45,8 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
     setMessage(null);
 
     try {
+      const supabase = createClient();
+
       if (configuracionId) {
         const { error } = await supabase
           .from("configuracion_ia")

@@ -4,7 +4,7 @@ import {
   parseObligacionesContrato,
   resolverObligacionExactaContrato,
 } from "@/lib/clasificar-obligacion";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export type CorregirClasificacionActividadInput = {
   actividadId: string;
@@ -18,6 +18,7 @@ export type CorregirClasificacionActividadResult =
   | { success: false; error: string };
 
 async function getObligacionesContratoTexto(): Promise<string | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("contratos")
     .select("obligaciones")
@@ -77,6 +78,7 @@ export async function corregirClasificacionActividad(
       };
     }
 
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("actividades")
       .update({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { generarInformeMensual } from "@/app/informe-mensual/actions";
+import { generarInformeMensual } from "@/app/(dashboard)/informe-mensual/actions";
 import InformeMensualPreview from "@/components/informe-mensual-preview";
 import { exportarInformeMensualDocx } from "@/lib/exportar-informe-docx";
 import type { InformeMensualData } from "@/types/informe-mensual";

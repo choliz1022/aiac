@@ -2,7 +2,7 @@
 
 import { analizarActividad } from "@/lib/analizar-actividad";
 import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type {
   AnalizarYGuardarActividadInput,
   AnalizarYGuardarActividadResult,
@@ -26,6 +26,7 @@ function contratoEstaCompleto(contrato: ContratoActivo): boolean {
 }
 
 async function getContratoActivo(): Promise<ContratoActivo | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("contratos")
     .select("id, nombre, entidad, objeto_contractual, obligaciones")
@@ -73,6 +74,7 @@ export async function analizarYGuardarActividad(
       configuracion,
     });
 
+    const supabase = await createClient();
     const { error } = await supabase.from("actividades").insert({
       contrato_id: contrato.id,
       fecha: input.fecha,

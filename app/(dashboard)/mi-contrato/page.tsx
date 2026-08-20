@@ -1,5 +1,5 @@
 import ContratoForm from "@/components/contrato-form";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { Contrato } from "@/types/contrato";
 
 async function getContratoActivo(): Promise<Contrato | null> {
@@ -14,6 +14,7 @@ async function getContratoActivo(): Promise<Contrato | null> {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 25)
     );
 
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("contratos")
       .select("id, nombre, entidad, objeto_contractual, obligaciones")

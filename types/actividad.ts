@@ -14,6 +14,7 @@ export type ActividadInsert = {
 
 export type Actividad = {
   id: string;
+  user_id?: string;
   contrato_id: string;
   fecha: string;
   actividad_original: string;

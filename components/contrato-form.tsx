@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { Contrato, ContratoFormData } from "@/types/contrato";
 
 type ContratoFormProps = {
@@ -64,6 +64,8 @@ export default function ContratoForm({ contrato }: ContratoFormProps) {
     setMessage(null);
 
     try {
+      const supabase = createClient();
+
       if (contratoId) {
         console.log("Payload UPDATE:", form);
 

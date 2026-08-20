@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export type ContratoActivoResumen = {
   id: string;
@@ -8,6 +8,7 @@ export type ContratoActivoResumen = {
 
 export async function getContratoActivoResumen(): Promise<ContratoActivoResumen | null> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("contratos")
       .select("id, nombre, entidad")

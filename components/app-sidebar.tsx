@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { cerrarSesion } from "@/app/login/actions";
 import { APP_NAV_ITEMS } from "@/lib/navigation";
 import type { ResumenSidebar } from "@/lib/resumen-sidebar";
 
 type AppSidebarProps = {
   resumenSidebar: ResumenSidebar;
+  userEmail: string;
 };
 
 function esRutaActiva(pathname: string, href: string): boolean {
@@ -74,15 +76,52 @@ function SidebarResumenOperativo({ resumenSidebar }: { resumenSidebar: ResumenSi
   );
 }
 
+function SidebarUsuario({
+  userEmail,
+  onLogout,
+  loggingOut,
+}: {
+  userEmail: string;
+  onLogout: () => void;
+  loggingOut: boolean;
+}) {
+  return (
+    <div className="border-b border-zinc-200 px-5 py-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+        Usuario
+      </p>
+      <p className="mt-1 truncate text-sm font-medium text-zinc-900">{userEmail}</p>
+      <button
+        type="button"
+        onClick={onLogout}
+        disabled={loggingOut}
+        className="mt-3 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+      >
+        {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+      </button>
+    </div>
+  );
+}
+
 function SidebarFooter({ resumenSidebar }: { resumenSidebar: ResumenSidebar }) {
   return <SidebarResumenOperativo resumenSidebar={resumenSidebar} />;
 }
 
-export default function AppSidebar({ resumenSidebar }: AppSidebarProps) {
+export default function AppSidebar({ resumenSidebar, userEmail }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileAbierto, setMobileAbierto] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const cerrarMobile = () => setMobileAbierto(false);
+
+  function handleLogout() {
+    startTransition(async () => {
+      await cerrarSesion();
+      router.push("/login");
+      router.refresh();
+    });
+  }
 
   const contenidoSidebar = (
     <>
@@ -115,6 +154,12 @@ export default function AppSidebar({ resumenSidebar }: AppSidebarProps) {
           );
         })}
       </nav>
+
+      <SidebarUsuario
+        userEmail={userEmail}
+        onLogout={handleLogout}
+        loggingOut={isPending}
+      />
 
       <div className="border-t border-zinc-200 px-5 py-4">
         <SidebarFooter resumenSidebar={resumenSidebar} />

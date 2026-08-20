@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { corregirClasificacionActividad } from "@/app/auditoria-obligaciones/actions";
+import { corregirClasificacionActividad } from "@/app/(dashboard)/auditoria-obligaciones/actions";
 import { obtenerIndicadorClasificacion } from "@/lib/estado-clasificacion";
 import type { Actividad } from "@/types/actividad";
 

@@ -1,7 +1,7 @@
 import { esObligacionBasura } from "@/lib/clasificar-obligacion";
 import { getPeriodoActual } from "@/lib/contrato-activo";
 import { calcularRangoFechas } from "@/lib/informe-mensual";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export type ResumenSidebar = {
   periodoActual: string;
@@ -57,6 +57,7 @@ export async function getResumenSidebar(): Promise<ResumenSidebar> {
   };
 
   try {
+    const supabase = await createClient();
     const [{ data: actividadesPeriodo, error: errorPeriodo }, { data: ultimaActividad, error: errorUltima }] =
       await Promise.all([
         supabase

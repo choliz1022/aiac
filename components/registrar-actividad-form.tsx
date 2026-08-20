@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { analizarYGuardarActividad } from "@/app/registrar-actividad/actions";
+import { analizarYGuardarActividad } from "@/app/(dashboard)/registrar-actividad/actions";
 
 type RegistrarActividadFormProps = {
   contratoId: string;

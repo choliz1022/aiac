@@ -1,5 +1,6 @@
 export type ConfiguracionIA = {
   id: string;
+  user_id?: string;
   estilo_redaccion: string;
   ejemplos_redaccion: string;
   instrucciones_informe: string;

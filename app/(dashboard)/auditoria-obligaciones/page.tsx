@@ -4,7 +4,7 @@ import {
   calcularPuntajeClasificacionAlmacenada,
   parseObligacionesContrato,
 } from "@/lib/clasificar-obligacion";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
 
 const CAMPOS_ACTIVIDAD = [
@@ -49,6 +49,7 @@ function normalizarActividad(
 }
 
 async function getContratoObligaciones(): Promise<string | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("contratos")
     .select("obligaciones")
@@ -73,6 +74,7 @@ async function getActividades(): Promise<{
       ? parseObligacionesContrato(obligacionesTexto)
       : [];
 
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("actividades")
       .select(CAMPOS_ACTIVIDAD)
