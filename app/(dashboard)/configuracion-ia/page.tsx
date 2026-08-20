@@ -1,4 +1,5 @@
 import ConfiguracionIAForm from "@/components/configuracion-ia-form";
+import RespaldoAiacPanel from "@/components/respaldo-aiac-panel";
 import { getConfiguracionIA } from "@/lib/configuracion-ia";
 
 export default async function ConfiguracionIAPage() {
@@ -16,8 +17,8 @@ export default async function ConfiguracionIAPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-8">
+    <div className="mx-auto max-w-4xl space-y-8">
+      <header>
         <h1 className="text-3xl font-semibold text-zinc-900">Configuración IA</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Personaliza el estilo de redacción que AIAC utilizará al analizar tus actividades.
@@ -31,6 +32,8 @@ export default async function ConfiguracionIAPage() {
           <ConfiguracionIAForm configuracion={configuracion} />
         )}
       </section>
+
+      <RespaldoAiacPanel />
     </div>
   );
 }

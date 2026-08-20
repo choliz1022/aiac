@@ -38,6 +38,12 @@ Esto agrega:
 - triggers que asignan `user_id = auth.uid()`
 - RLS: `auth.uid() = user_id`
 
+Luego ejecutar también:
+
+`supabase/migrations/006_fix_legacy_bootstrap_triggers.sql`
+
+(Necesario si el bootstrap falla por triggers que exigen `auth.uid()` en SQL Editor.)
+
 ---
 
 ## 3. Bootstrap de datos legacy (Andrés)

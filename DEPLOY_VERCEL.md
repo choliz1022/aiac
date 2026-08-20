@@ -31,6 +31,7 @@ En el repositorio solo están migraciones incrementales en `supabase/migrations/
 | `003_add_tipo_actividad_detectada.sql` | Columna `tipo_actividad_detectada` |
 | `004_add_clasificacion_manual.sql` | Columnas `clasificacion_manual`, `puntaje_clasificacion` |
 | `005_multiusuario_auth.sql` | `user_id`, RLS por usuario, triggers Auth |
+| `006_fix_legacy_bootstrap_triggers.sql` | Bootstrap legacy sin conflicto con triggers |
 
 Ver también [`MULTIUSUARIO.md`](MULTIUSUARIO.md) para bootstrap de datos legacy y configuración de Supabase Auth.
 
