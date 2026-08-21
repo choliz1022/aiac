@@ -3,7 +3,9 @@
 import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { corregirClasificacionActividad } from "@/app/(dashboard)/auditoria-obligaciones/actions";
+import EvidenciasActividadGaleria from "@/components/evidencias-actividad-galeria";
 import { obtenerIndicadorClasificacion } from "@/lib/estado-clasificacion";
+import { formatearIndicadorEvidencias } from "@/lib/evidencias";
 import type { Actividad } from "@/types/actividad";
 
 type AuditoriaObligacionesProps = {
@@ -74,6 +76,7 @@ export default function AuditoriaObligaciones({
   const [mes, setMes] = useState(TODOS_MESES);
   const [obligacion, setObligacion] = useState(TODAS_OBLIGACIONES);
   const [actividadEnEdicionId, setActividadEnEdicionId] = useState<string | null>(null);
+  const [actividadEvidenciasId, setActividadEvidenciasId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioCorreccion | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export default function AuditoriaObligaciones({
 
   function iniciarCorreccion(actividad: Actividad) {
     setActividadEnEdicionId(actividad.id);
+    setActividadEvidenciasId(null);
     setFormulario(crearFormularioDesdeActividad(actividad));
     setMensajeError(null);
     setMensajeExito(null);
@@ -128,6 +132,12 @@ export default function AuditoriaObligaciones({
     setActividadEnEdicionId(null);
     setFormulario(null);
     setMensajeError(null);
+  }
+
+  function alternarEvidencias(actividadId: string) {
+    setActividadEvidenciasId((actual) => (actual === actividadId ? null : actividadId));
+    setActividadEnEdicionId(null);
+    setFormulario(null);
   }
 
   function actualizarCampo(campo: keyof FormularioCorreccion, valor: string) {
@@ -258,6 +268,7 @@ export default function AuditoriaObligaciones({
               <th className="px-4 py-3 text-left font-medium text-zinc-700">
                 Proyecto detectado
               </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-700">Evidencias</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-700">Acciones</th>
             </tr>
           </thead>
@@ -268,6 +279,8 @@ export default function AuditoriaObligaciones({
                 actividad.clasificacion_manual
               );
               const enEdicion = actividadEnEdicionId === actividad.id;
+              const mostrandoEvidencias = actividadEvidenciasId === actividad.id;
+              const cantidadEvidencias = actividad.evidencias_count ?? 0;
 
               return (
                 <Fragment key={actividad.id}>
@@ -296,32 +309,60 @@ export default function AuditoriaObligaciones({
                     <td className="max-w-xs px-4 py-4 text-zinc-800">
                       {actividad.proyecto_detectado}
                     </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
+                      {formatearIndicadorEvidencias(cantidadEvidencias)}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-4">
-                      {enEdicion ? (
-                        <button
-                          type="button"
-                          onClick={cancelarCorreccion}
-                          disabled={isPending}
-                          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          Cancelar
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => iniciarCorreccion(actividad)}
-                          disabled={isPending || obligacionesContrato.length === 0}
-                          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 disabled:opacity-50"
-                        >
-                          Corregir
-                        </button>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {cantidadEvidencias > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => alternarEvidencias(actividad.id)}
+                            disabled={isPending}
+                            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                          >
+                            {mostrandoEvidencias ? "Ocultar" : "Evidencias"}
+                          </button>
+                        ) : null}
+                        {enEdicion ? (
+                          <button
+                            type="button"
+                            onClick={cancelarCorreccion}
+                            disabled={isPending}
+                            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                          >
+                            Cancelar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => iniciarCorreccion(actividad)}
+                            disabled={isPending || obligacionesContrato.length === 0}
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            Corregir
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
 
+                  {mostrandoEvidencias ? (
+                    <tr className="bg-zinc-50/80">
+                      <td colSpan={8} className="px-4 py-4">
+                        <EvidenciasActividadGaleria
+                          actividadId={actividad.id}
+                          cantidad={cantidadEvidencias}
+                          compacto
+                          autoCargar
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+
                   {enEdicion && formulario ? (
                     <tr className="bg-amber-50/40">
-                      <td colSpan={7} className="px-4 py-4">
+                      <td colSpan={8} className="px-4 py-4">
                         <div className="space-y-4 rounded-xl border border-amber-200 bg-white p-4">
                           <p className="text-sm font-medium text-zinc-900">
                             Corrección manual de clasificación

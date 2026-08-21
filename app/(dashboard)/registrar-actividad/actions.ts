@@ -1,43 +1,52 @@
 "use server";
 
-import { analizarActividad } from "@/lib/analizar-actividad";
-import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
+import { eliminarActividadCompleta } from "@/lib/eliminar-actividad";
+import { guardarReferenciasEvidenciasActividad } from "@/lib/gestion-actividad";
+import {
+  camposPersistenciaDesdeAnalisis,
+  contratoEstaCompleto,
+  ejecutarAnalisisActividad,
+  obtenerContratoActivo,
+} from "@/lib/pipeline-analisis-actividad";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AnalizarYGuardarActividadInput,
   AnalizarYGuardarActividadResult,
+  GuardarReferenciasEvidenciasInput,
+  GuardarReferenciasEvidenciasResult,
 } from "@/types/analisis-actividad";
 
-type ContratoActivo = {
-  id: string;
-  nombre: string;
-  entidad: string;
-  objeto_contractual: string;
-  obligaciones: string;
-};
-
-function contratoEstaCompleto(contrato: ContratoActivo): boolean {
-  return (
-    contrato.nombre.trim() !== "" &&
-    contrato.entidad.trim() !== "" &&
-    contrato.objeto_contractual.trim() !== "" &&
-    contrato.obligaciones.trim() !== ""
-  );
-}
-
-async function getContratoActivo(): Promise<ContratoActivo | null> {
+async function getAuthenticatedUserId(): Promise<string | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("id, nombre, entidad, objeto_contractual, obligaciones")
-    .limit(1)
-    .maybeSingle();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !user) {
+    return null;
   }
 
-  return data;
+  return user.id;
+}
+
+async function actividadPerteneceAlUsuario(
+  actividadId: string,
+  userId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("actividades")
+    .select("id")
+    .eq("id", actividadId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return false;
+  }
+
+  return true;
 }
 
 export async function analizarYGuardarActividad(
@@ -54,7 +63,8 @@ export async function analizarYGuardarActividad(
       return { success: false, error: "La actividad es obligatoria." };
     }
 
-    const contrato = await getContratoActivo();
+    const supabase = await createClient();
+    const contrato = await obtenerContratoActivo(supabase);
 
     if (!contrato || !contratoEstaCompleto(contrato)) {
       return {
@@ -63,38 +73,32 @@ export async function analizarYGuardarActividad(
       };
     }
 
-    const configuracion = toConfiguracionIAContext(await getConfiguracionIA().catch(() => null));
+    const userId = await getAuthenticatedUserId();
 
-    const analisis = await analizarActividad({
-      nombre: contrato.nombre,
-      entidad: contrato.entidad,
-      objetoContractual: contrato.objeto_contractual,
-      obligaciones: contrato.obligaciones,
-      actividadOriginal,
-      configuracion,
-    });
+    if (!userId) {
+      return { success: false, error: "Debes iniciar sesión para registrar actividades." };
+    }
 
-    const supabase = await createClient();
-    const { error } = await supabase.from("actividades").insert({
-      contrato_id: contrato.id,
-      fecha: input.fecha,
-      actividad_original: actividadOriginal,
-      tipo_actividad_detectada: analisis.tipo_actividad_detectada,
-      proyecto_detectado: analisis.proyecto_detectado,
-      obligacion_detectada: analisis.obligacion_detectada,
-      clasificacion_manual: false,
-      puntaje_clasificacion: analisis.puntaje_clasificacion,
-      redaccion_ia: analisis.redaccion_ia,
-      resumen_ia: analisis.resumen_ia,
-      palabras_clave: analisis.palabras_clave,
-    });
+    const analisis = await ejecutarAnalisisActividad(contrato, actividadOriginal);
 
-    if (error) {
-      return { success: false, error: error.message };
+    const { data: actividadInsertada, error } = await supabase
+      .from("actividades")
+      .insert({
+        contrato_id: contrato.id,
+        fecha: input.fecha,
+        actividad_original: actividadOriginal,
+        ...camposPersistenciaDesdeAnalisis(analisis),
+      })
+      .select("id")
+      .single();
+
+    if (error || !actividadInsertada) {
+      return { success: false, error: error?.message ?? "No se pudo guardar la actividad." };
     }
 
     return {
       success: true,
+      actividad_id: actividadInsertada.id,
       proyecto_detectado: analisis.proyecto_detectado,
       obligacion_detectada: analisis.obligacion_detectada,
       resumen_ia: analisis.resumen_ia,
@@ -102,6 +106,78 @@ export async function analizarYGuardarActividad(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "No se pudo analizar y guardar la actividad.";
+
+    return { success: false, error: message };
+  }
+}
+
+export async function guardarReferenciasEvidencias(
+  input: GuardarReferenciasEvidenciasInput
+): Promise<GuardarReferenciasEvidenciasResult> {
+  try {
+    const actividadId = input.actividadId.trim();
+
+    if (!actividadId) {
+      return { success: false, error: "Actividad no válida." };
+    }
+
+    if (input.evidencias.length === 0) {
+      return { success: true, evidencias_count: 0 };
+    }
+
+    const userId = await getAuthenticatedUserId();
+
+    if (!userId) {
+      return { success: false, error: "Debes iniciar sesión para registrar evidencias." };
+    }
+
+    const pertenece = await actividadPerteneceAlUsuario(actividadId, userId);
+
+    if (!pertenece) {
+      return { success: false, error: "La actividad no pertenece a tu cuenta." };
+    }
+
+    const supabase = await createClient();
+    const resultado = await guardarReferenciasEvidenciasActividad(
+      supabase,
+      actividadId,
+      userId,
+      input.evidencias
+    );
+
+    if (!resultado.success) {
+      return resultado;
+    }
+
+    return { success: true, evidencias_count: resultado.evidencias_count };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "No se pudieron guardar las referencias.";
+
+    return { success: false, error: message };
+  }
+}
+
+export async function revertirActividadRegistrada(
+  actividadId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getAuthenticatedUserId();
+
+    if (!userId) {
+      return { success: false, error: "Sesión no válida." };
+    }
+
+    const supabase = await createClient();
+    const resultado = await eliminarActividadCompleta(supabase, actividadId, userId);
+
+    if (!resultado.success) {
+      return { success: false, error: resultado.error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo revertir la actividad.";
 
     return { success: false, error: message };
   }

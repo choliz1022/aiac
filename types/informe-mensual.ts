@@ -3,16 +3,27 @@ export type InformeMensualInput = {
   anio: number;
 };
 
-export type InformeMensualActividadConsolidada = {
-  frente: string;
-  redaccion_consolidada: string;
-  actividades_origen_ids: string[];
-  fechas_origen: string[];
+export type InformeMensualEvidencia = {
+  id: string;
+  actividad_id: string;
+  url: string;
+  nombre_archivo: string;
+  created_at: string;
+  signed_url?: string;
+};
+
+/** Fila contractual: una actividad registrada con su redacción IA y evidencias. */
+export type InformeMensualActividadFila = {
+  id: string;
+  fecha: string;
+  redaccion_ia: string;
+  evidencias: InformeMensualEvidencia[];
 };
 
 export type InformeMensualObligacion = {
+  /** Texto completo de la obligación contractual. */
   nombre: string;
-  actividadesConsolidadas: InformeMensualActividadConsolidada[];
+  actividades: InformeMensualActividadFila[];
   mensajeSinActividades?: string;
 };
 
@@ -30,11 +41,8 @@ export type InformeMensualPeriodo = {
 
 export type InformeMensualResumen = {
   totalActividades: number;
-  totalActividadesConsolidadas: number;
   totalObligaciones: number;
   totalObligacionesTrabajadas: number;
-  totalProyectos: number;
-  proyectosIdentificados: string[];
 };
 
 export type InformeMensualData = {
@@ -64,6 +72,15 @@ export type GenerarInformeResult =
   | GenerarInformeSuccess
   | GenerarInformeSinActividades
   | GenerarInformeError;
+
+/** Tipos legacy usados por el módulo de consolidación IA (no usados en el informe contractual). */
+export type InformeMensualActividadConsolidada = {
+  frente: string;
+  redaccion_consolidada: string;
+  actividades_origen_ids: string[];
+  fechas_origen: string[];
+  evidencias: InformeMensualEvidencia[];
+};
 
 export type ConsolidacionInformeItem = {
   frente: string;

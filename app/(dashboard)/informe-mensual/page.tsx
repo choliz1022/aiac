@@ -8,7 +8,8 @@ export default function InformeMensualPage() {
       <header className="mb-8">
         <h1 className="text-3xl font-semibold text-zinc-900">Informe mensual</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Genera una vista previa del informe mensual de actividades contractuales.
+          Genera una vista previa del informe mensual en formato contractual: obligaciones,
+          actividades realizadas y evidencias fotográficas.
         </p>
       </header>
 

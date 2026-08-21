@@ -9,7 +9,41 @@ function isPublicRoute(pathname: string): boolean {
   );
 }
 
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  return request.cookies
+    .getAll()
+    .some(({ name }) => name.startsWith("sb-") && name.includes("auth-token"));
+}
+
+function redirectWithCookies(
+  url: URL,
+  supabaseResponse: NextResponse
+): NextResponse {
+  const redirectResponse = NextResponse.redirect(url);
+
+  supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
+    redirectResponse.cookies.set(name, value);
+  });
+
+  return redirectResponse;
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Rutas públicas: sin cliente Supabase ni redirecciones de auth.
+  if (isPublicRoute(pathname)) {
+    return NextResponse.next({ request });
+  }
+
+  // Sin cookie de sesión: redirigir sin llamar a Supabase (evita timeout en Edge).
+  if (!hasSupabaseAuthCookie(request)) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -39,24 +73,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // getSession refresca tokens si expiraron; no llama GET /user como getUser().
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  const { pathname } = request.nextUrl;
-
-  if (!user && !isPublicRoute(pathname)) {
+  if (!session) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (user && pathname === "/login") {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    homeUrl.search = "";
-    return NextResponse.redirect(homeUrl);
+    return redirectWithCookies(loginUrl, supabaseResponse);
   }
 
   return supabaseResponse;

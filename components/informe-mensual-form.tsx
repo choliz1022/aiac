@@ -139,7 +139,7 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
               disabled={generando}
               className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {generando ? "Consolidando con IA..." : "Generar informe"}
+              {generando ? "Generando informe..." : "Generar informe"}
             </button>
 
             {mensaje && (

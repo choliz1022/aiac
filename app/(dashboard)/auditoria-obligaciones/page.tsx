@@ -4,6 +4,7 @@ import {
   calcularPuntajeClasificacionAlmacenada,
   parseObligacionesContrato,
 } from "@/lib/clasificar-obligacion";
+import { normalizarConteoEvidenciasRelacion } from "@/lib/evidencias";
 import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
 
@@ -21,7 +22,12 @@ const CAMPOS_ACTIVIDAD = [
   "resumen_ia",
   "palabras_clave",
   "created_at",
+  "actividad_evidencias(count)",
 ].join(", ");
+
+type ActividadConRelacionEvidencias = Actividad & {
+  actividad_evidencias?: { count: number }[];
+};
 
 function normalizarActividad(
   actividad: Actividad,
@@ -85,9 +91,17 @@ async function getActividades(): Promise<{
       return { actividades: [], obligacionesContrato, error: error.message };
     }
 
-    const actividades = (data ?? []).map((actividad) =>
-      normalizarActividad(actividad as unknown as Actividad, obligacionesTexto)
-    );
+    const actividades = (data ?? []).map((actividad) => {
+      const registro = actividad as unknown as ActividadConRelacionEvidencias;
+
+      return normalizarActividad(
+        {
+          ...registro,
+          evidencias_count: normalizarConteoEvidenciasRelacion(registro.actividad_evidencias),
+        },
+        obligacionesTexto
+      );
+    });
 
     return { actividades, obligacionesContrato, error: null };
   } catch (error) {

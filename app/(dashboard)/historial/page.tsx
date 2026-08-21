@@ -1,8 +1,13 @@
 import HistorialActividades from "@/components/historial-actividades";
 import Link from "next/link";
+import { normalizarConteoEvidenciasRelacion } from "@/lib/evidencias";
 import { AUDITORIA_OBLIGACIONES_HREF } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
+
+type ActividadConRelacionEvidencias = Actividad & {
+  actividad_evidencias?: { count: number }[];
+};
 
 async function getActividades(): Promise<{
   actividades: Actividad[];
@@ -13,7 +18,7 @@ async function getActividades(): Promise<{
     const { data, error } = await supabase
       .from("actividades")
       .select(
-        "id, contrato_id, fecha, actividad_original, tipo_actividad_detectada, proyecto_detectado, obligacion_detectada, clasificacion_manual, puntaje_clasificacion, redaccion_ia, resumen_ia, palabras_clave, created_at"
+        "id, contrato_id, fecha, actividad_original, tipo_actividad_detectada, proyecto_detectado, obligacion_detectada, clasificacion_manual, puntaje_clasificacion, redaccion_ia, resumen_ia, palabras_clave, created_at, actividad_evidencias(count)"
       )
       .order("fecha", { ascending: false });
 
@@ -23,11 +28,16 @@ async function getActividades(): Promise<{
     }
 
     return {
-      actividades: (data ?? []).map((actividad) => ({
-        ...actividad,
-        clasificacion_manual: actividad.clasificacion_manual ?? false,
-        puntaje_clasificacion: actividad.puntaje_clasificacion ?? 0,
-      })),
+      actividades: (data ?? []).map((actividad) => {
+        const registro = actividad as unknown as ActividadConRelacionEvidencias;
+
+        return {
+          ...registro,
+          clasificacion_manual: registro.clasificacion_manual ?? false,
+          puntaje_clasificacion: registro.puntaje_clasificacion ?? 0,
+          evidencias_count: normalizarConteoEvidenciasRelacion(registro.actividad_evidencias),
+        };
+      }),
       error: null,
     };
   } catch (error) {

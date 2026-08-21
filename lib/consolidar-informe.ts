@@ -12,7 +12,10 @@ import type {
   ConsolidacionInformeResult,
   InformeMensualActividadConsolidada,
   InformeMensualContrato,
+  InformeMensualEvidencia,
 } from "@/types/informe-mensual";
+import { recolectarEvidenciasDeActividades } from "@/lib/evidencias";
+import type { EvidenciasPorActividad } from "@/types/actividad-evidencia";
 
 const ECOSISTEMA_INSUFICIENTE = new Set([
   "sirci",
@@ -286,6 +289,7 @@ type ConsolidarObligacionInput = {
   actividades: Actividad[];
   idsExcluidos?: Set<string>;
   contextoTecnico?: string | null;
+  evidenciasPorActividad?: EvidenciasPorActividad;
 };
 
 type AgrupacionInformeItem = {
@@ -1152,7 +1156,8 @@ async function agruparActividadesConOpenAI(
 
 export function mapConsolidacionesConFechas(
   consolidaciones: ConsolidacionInformeResult["consolidaciones"],
-  actividades: Actividad[]
+  actividades: Actividad[],
+  evidenciasPorActividad: EvidenciasPorActividad = {}
 ): InformeMensualActividadConsolidada[] {
   const actividadesPorId = new Map(actividades.map((actividad) => [actividad.id, actividad]));
 
@@ -1162,11 +1167,23 @@ export function mapConsolidacionesConFechas(
       .filter((fecha): fecha is string => Boolean(fecha))
       .sort((a, b) => a.localeCompare(b));
 
+    const evidencias: InformeMensualEvidencia[] = recolectarEvidenciasDeActividades(
+      consolidacion.actividades_origen_ids,
+      evidenciasPorActividad
+    ).map((evidencia) => ({
+      id: evidencia.id,
+      actividad_id: evidencia.actividad_id,
+      url: evidencia.url,
+      nombre_archivo: evidencia.nombre_archivo,
+      created_at: evidencia.created_at,
+    }));
+
     return {
       frente: consolidacion.frente,
       redaccion_consolidada: consolidacion.redaccion_consolidada,
       actividades_origen_ids: consolidacion.actividades_origen_ids,
       fechas_origen,
+      evidencias,
     };
   });
 }
@@ -1177,6 +1194,7 @@ export async function consolidarObligacionInforme({
   actividades,
   idsExcluidos = new Set<string>(),
   contextoTecnico = null,
+  evidenciasPorActividad = {},
 }: ConsolidarObligacionInput): Promise<InformeMensualActividadConsolidada[]> {
   const actividadesDisponibles = actividades
     .filter((actividad) => !idsExcluidos.has(actividad.id))
@@ -1220,5 +1238,9 @@ export async function consolidarObligacionInforme({
     );
   }
 
-  return mapConsolidacionesConFechas(consolidaciones, actividadesDisponibles);
+  return mapConsolidacionesConFechas(
+    consolidaciones,
+    actividadesDisponibles,
+    evidenciasPorActividad
+  );
 }

@@ -1,16 +1,16 @@
 "use server";
 
-import { consolidarObligacionInforme } from "@/lib/consolidar-informe";
-import { getConfiguracionIA } from "@/lib/configuracion-ia";
+import { adjuntarSignedUrls, obtenerEvidenciasPorActividadIds } from "@/lib/evidencias";
 import {
   asignarActividadesAObligaciones,
   calcularRangoFechas,
   construirInformeMensual,
-  MENSAJE_OBLIGACION_SIN_ACTIVIDADES,
+  construirObligacionesInformeContractual,
   parseObligacionesContrato,
 } from "@/lib/informe-mensual";
 import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
+import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia";
 import type {
   GenerarInformeResult,
   InformeMensualContrato,
@@ -76,10 +76,24 @@ function validarPeriodo(mes: number, anio: number): string | null {
   return null;
 }
 
-async function consolidarInformePorObligaciones(
+async function adjuntarSignedUrlsPorActividad(
+  actividadIds: string[],
+  evidenciasPorActividad: Awaited<ReturnType<typeof obtenerEvidenciasPorActividadIds>>
+): Promise<Record<string, ActividadEvidenciaConSignedUrl[]>> {
+  const supabase = await createClient();
+  const resultado: Record<string, ActividadEvidenciaConSignedUrl[]> = {};
+
+  for (const actividadId of actividadIds) {
+    const evidencias = evidenciasPorActividad[actividadId] ?? [];
+    resultado[actividadId] = await adjuntarSignedUrls(supabase, evidencias);
+  }
+
+  return resultado;
+}
+
+async function construirInformePorObligaciones(
   contrato: ContratoInforme,
-  actividades: Actividad[],
-  contextoTecnico: string | null
+  actividades: Actividad[]
 ): Promise<InformeMensualObligacion[]> {
   const obligacionesContrato = parseObligacionesContrato(contrato.obligaciones);
 
@@ -87,45 +101,24 @@ async function consolidarInformePorObligaciones(
     throw new Error("El contrato activo no tiene obligaciones contractuales configuradas.");
   }
 
+  const supabase = await createClient();
+  const actividadIds = actividades.map((actividad) => actividad.id);
+  const evidenciasPorActividad = await obtenerEvidenciasPorActividadIds(
+    supabase,
+    actividadIds
+  );
+  const evidenciasConUrl = await adjuntarSignedUrlsPorActividad(
+    actividadIds,
+    evidenciasPorActividad
+  );
+
   const grupos = asignarActividadesAObligaciones(actividades, obligacionesContrato);
-  const obligaciones: InformeMensualObligacion[] = [];
-  const idsConsolidadosEnInforme = new Set<string>();
 
-  for (const nombre of obligacionesContrato) {
-    const actividadesObligacion = (grupos.get(nombre) ?? []).filter(
-      (actividad) => !idsConsolidadosEnInforme.has(actividad.id)
-    );
-
-    if (actividadesObligacion.length === 0) {
-      obligaciones.push({
-        nombre,
-        actividadesConsolidadas: [],
-        mensajeSinActividades: MENSAJE_OBLIGACION_SIN_ACTIVIDADES,
-      });
-      continue;
-    }
-
-    const actividadesConsolidadas = await consolidarObligacionInforme({
-      obligacion: nombre,
-      contrato,
-      actividades: actividadesObligacion,
-      idsExcluidos: idsConsolidadosEnInforme,
-      contextoTecnico,
-    });
-
-    for (const consolidacion of actividadesConsolidadas) {
-      for (const id of consolidacion.actividades_origen_ids) {
-        idsConsolidadosEnInforme.add(id);
-      }
-    }
-
-    obligaciones.push({
-      nombre,
-      actividadesConsolidadas,
-    });
-  }
-
-  return obligaciones;
+  return construirObligacionesInformeContractual(
+    obligacionesContrato,
+    grupos,
+    evidenciasConUrl
+  );
 }
 
 export async function generarInformeMensual(
@@ -153,14 +146,7 @@ export async function generarInformeMensual(
       return { success: true, sinActividades: true };
     }
 
-    const configuracion = await getConfiguracionIA().catch(() => null);
-    const contextoTecnico = configuracion?.contexto_tecnico.trim() || null;
-
-    const obligaciones = await consolidarInformePorObligaciones(
-      contrato,
-      actividades,
-      contextoTecnico
-    );
+    const obligaciones = await construirInformePorObligaciones(contrato, actividades);
 
     const informe = construirInformeMensual({
       contrato,

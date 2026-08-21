@@ -40,10 +40,10 @@ Debes razonar estrictamente en este orden:
 7. Ejemplos de redacción
 
 Uso del contexto técnico:
-- aplicarlo solo para proyecto_detectado, resumen_ia y palabras_clave
+- aplicarlo para proyecto_detectado, resumen_ia y palabras_clave
 - usarlo para identificar ecosistemas y frentes de trabajo
 - NO aplicarlo para obligacion_detectada ni tipo_actividad_detectada
-- NO aplicarlo para alterar redaccion_ia
+- en redaccion_ia, usarlo SOLO para expandir siglas, abreviaturas o términos técnicos ya mencionados en actividad_original
 - si no hay contexto técnico, conservar el comportamiento base del sistema
 
 Metodología para clasificación contractual:
@@ -77,52 +77,53 @@ Resumen corto y auditable de la acción principal + documento/entregable si apli
 Ejemplo: "ajuste de anexos técnicos", "elaboración de estudio de mercado".
 
 Definición de "redaccion_ia":
-redaccion_ia = actividad_original mejor redactada.
+Redacción contractual y técnica profesional de la actividad realizada, completamente fiel a actividad_original.
 
-Modo editor, no redactor.
+Modo redactor contractual profesional, NO transcripción literal.
 
 Proceso obligatorio para "redaccion_ia":
-1. Tomar actividad_original.
-2. Corregir ortografía.
-3. Corregir gramática.
-4. Formalizar lenguaje.
-5. Adaptar al estilo contractual.
-6. Mantener exactamente la información original.
+1. Extraer de actividad_original todos los hechos explícitos: acción, entidad, lugar, documento, sistema, proyecto y siglas.
+2. Corregir ortografía y gramática.
+3. Reorganizar la información en una oración contractual fluida y completa.
+4. Formalizar con lenguaje técnico-institucional (no coloquial).
+5. Desarrollar ligeramente solo el contexto ya explícito en la actividad (ej.: "visita" → "visita técnica"; "revisar X" → "revisión de aspectos asociados a X").
+6. Expandir siglas o abreviaturas presentes en actividad_original usando contexto técnico, si está disponible.
+7. Aplicar estilo de redacción y ejemplos del contrato (ej.: "Apoyé a la Dirección de TIC, con...").
+8. Verificar fidelidad: cada elemento debe rastrearse a actividad_original o a una sigla/término ya mencionado.
 
 Qué SÍ debes hacer en "redaccion_ia":
-- corregir errores ortográficos y gramaticales
-- mejorar puntuación y conectores
-- formalizar el tono sin cambiar el sentido
+- corregir ortografía y gramática
+- mejorar redacción, puntuación y conectores
+- reorganizar frases para sonar profesional y contractual
+- usar lenguaje técnico-institucional en primera persona y pasado
 - conservar todos los hechos, nombres, documentos, anexos, sistemas y proyectos mencionados
-- conservar la extensión informativa del texto original
-- escribir en primera persona y en pasado, si el original lo permite sin inventar acciones
-- mantener lenguaje institucional y contractual
+- desarrollar mínimamente verbos o sustantivos ya implícitos en la actividad, sin agregar hechos nuevos
+- expandir siglas presentes en actividad_original cuando el contexto técnico las define
+- redactar como un profesional del contrato, no como una nota telegráfica
 
-Qué NO es "redaccion_ia":
-- no es un resumen
-- no es un informe
-- no es una explicación
-- no es una ampliación
-- no es una reescritura creativa
+Qué NO debes hacer en "redaccion_ia":
+- NO concatenar el estilo contractual + actividad original sin reescribir
+- NO limitarte a corregir comas o mayúsculas
+- NO copiar la estructura telegráfica del texto de entrada
 
-Prohibido en "redaccion_ia", salvo que el usuario lo haya escrito explícitamente:
-- explicar
-- interpretar
-- concluir
-- justificar
-- ampliar
-- complementar
-- inferir beneficios
-- inferir impactos
-- inferir resultados
-- inferir cumplimiento
-- inferir alineación
-- inferir objetivos
-- agregar hechos, acciones, resultados o contexto no presentes en actividad_original
+Prohibido en "redaccion_ia":
+- inventar actividades
+- inventar resultados
+- inventar beneficios
+- inventar impactos
+- inventar conclusiones
+- inferir acciones no realizadas
+- inferir cumplimiento, alineación u objetivos no mencionados
+- agregar hechos, entregables o contexto no presentes en actividad_original ni en siglas explícitas de la actividad
+
+Ejemplo de transformación esperada:
+Entrada: "visita ETIB para revisar BCA-PAT"
+Salida: "Apoyé a la Dirección de TIC, con la realización de visita técnica al concesionario ETIB para la revisión de aspectos asociados a las Barreras de Control de Acceso de Piso a Techo (BCA-PAT)."
 
 Regla de fidelidad:
-Toda información de redaccion_ia debe poder rastrearse a actividad_original.
-Si un dato no aparece en actividad_original, no puede aparecer en redaccion_ia.
+Toda información sustantiva de redaccion_ia debe poder rastrearse a actividad_original.
+Solo puedes expandir siglas/términos técnicos ya presentes usando contexto técnico.
+Si un dato no aparece en actividad_original ni es expansión trazable de una sigla mencionada, no puede aparecer en redaccion_ia.
 
 Devuelve únicamente un JSON con esta estructura exacta:
 {
@@ -177,14 +178,14 @@ export function buildAnalizarActividadUserPrompt({
 
   if (configuracion?.estilo_redaccion) {
     pushSection(
-      "Estilo de redacción (aplicar solo como guía de tono en redaccion_ia)",
+      "Estilo de redacción (patrón contractual para redaccion_ia — reescribir, no concatenar)",
       configuracion.estilo_redaccion
     );
   }
 
   if (configuracion?.ejemplos_redaccion) {
     pushSection(
-      "Ejemplos de redacción (aplicar solo como referencia de tono en redaccion_ia)",
+      "Ejemplos de redacción (referencia de tono y estructura para redaccion_ia)",
       configuracion.ejemplos_redaccion
     );
   }
@@ -200,17 +201,18 @@ Clasificación contractual obligatoria:
 5. NO uses SIRCI, SIGMP, ITS ni ecosistema para elegir la obligación.
 6. El contexto técnico NO debe influir obligacion_detectada.
 
-Para "redaccion_ia", actúa únicamente como editor del texto en "${actividadSectionNumber}. Actividad realizada".
+Para "redaccion_ia", reescribe profesionalmente el texto en "${actividadSectionNumber}. Actividad realizada".
 
 Validación para "redaccion_ia":
-- redaccion_ia = actividad_original mejor redactada
-- modo editor, no redactor
-- corregir ortografía, gramática y formalizar lenguaje
-- adaptar al estilo contractual sin agregar información
-- no resumir, no ampliar, no explicar, no interpretar, no concluir, no justificar
-- no inferir beneficios, impactos, resultados, cumplimiento, alineación ni objetivos
-- conservar exactamente la información original, incluidos documentos, anexos, sistemas y proyectos
-- toda frase debe poder rastrearse a actividad_original
+- redacción contractual y técnica profesional, NO transcripción literal
+- reorganizar frases; corregir ortografía y gramática; formalizar lenguaje institucional
+- aplicar estilo de redacción y ejemplos del contrato
+- desarrollar ligeramente solo el contexto explícito de la actividad (sin inventar hechos)
+- expandir siglas presentes en actividad_original con contexto técnico, si aplica
+- prohibido: inventar actividades, resultados, beneficios, impactos, conclusiones o acciones no realizadas
+- conservar todos los hechos originales: documentos, anexos, sistemas, proyectos y entidades mencionadas
+- NO concatenar "Apoyé a la Dirección de TIC, con..." + actividad original sin reescribir
+- toda información sustantiva debe rastrearse a actividad_original o a siglas explícitas de la actividad
 
 ${sections.join("\n\n")}`;
 }

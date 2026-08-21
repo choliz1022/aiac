@@ -48,7 +48,7 @@ export default async function RegistrarActividadPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold text-zinc-900">Registrar actividad</h1>
         <p className="mt-2 text-sm text-zinc-600">
