@@ -92,6 +92,12 @@ export async function eliminarActividadCompleta(
 
   const pertenece = await actividadPerteneceAlUsuario(supabase, actividadIdLimpio, userId);
 
+  console.log("[eliminar-actividad] Inicio", {
+    actividadId: actividadIdLimpio,
+    userId,
+    pertenece,
+  });
+
   if (!pertenece) {
     return { success: false, error: "No tienes permiso para eliminar esta actividad." };
   }
@@ -105,15 +111,44 @@ export async function eliminarActividadCompleta(
 
     await eliminarArchivosStorage(supabase, rutas);
 
-    const { error: deleteError } = await supabase
+    console.log("[eliminar-actividad] Storage procesado", {
+      actividadId: actividadIdLimpio,
+      archivosEliminados: rutas.length,
+    });
+
+    const { data: filasEliminadas, error: deleteError } = await supabase
       .from("actividades")
       .delete()
       .eq("id", actividadIdLimpio)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("id");
 
     if (deleteError) {
+      console.error("[eliminar-actividad] DELETE falló", {
+        actividadId: actividadIdLimpio,
+        userId,
+        error: deleteError.message,
+      });
+
       return { success: false, error: deleteError.message };
     }
+
+    if (!filasEliminadas || filasEliminadas.length === 0) {
+      console.warn("[eliminar-actividad] DELETE sin filas afectadas", {
+        actividadId: actividadIdLimpio,
+        userId,
+      });
+
+      return {
+        success: false,
+        error: "No se encontró la actividad o no pertenece al usuario.",
+      };
+    }
+
+    console.log("[eliminar-actividad] DELETE efectivo", {
+      actividadId: actividadIdLimpio,
+      filasEliminadas: filasEliminadas.length,
+    });
 
     return { success: true, archivosEliminados: rutas.length };
   } catch (error) {
