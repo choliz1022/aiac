@@ -7,6 +7,7 @@ import {
   formatearIndicadorEvidencias,
   validarArchivoEvidencia,
 } from "@/lib/evidencias";
+import { optimizarImagenesEvidencia } from "@/lib/optimizar-imagen-evidencia";
 
 type EvidenciaPendiente = {
   id: string;
@@ -33,9 +34,11 @@ export default function EvidenciasActividadInput({
   variant = "default",
   existentesCount = 0,
 }: EvidenciasActividadInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
+  const inputCamaraRef = useRef<HTMLInputElement>(null);
   const [pendientes, setPendientes] = useState<EvidenciaPendiente[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [optimizando, setOptimizando] = useState(false);
   const esSidebar = variant === "sidebar";
 
   useEffect(() => {
@@ -60,18 +63,15 @@ export default function EvidenciasActividadInput({
     [archivos.length, existentesCount]
   );
 
+  const accionesDeshabilitadas =
+    disabled || optimizando || totalActual >= EVIDENCIAS_MAX_ARCHIVOS;
+
   function sincronizarArchivos(nuevosPendientes: EvidenciaPendiente[]) {
     setPendientes(nuevosPendientes);
     onChange(nuevosPendientes.map((pendiente) => pendiente.file));
   }
 
-  function handleSeleccion(event: React.ChangeEvent<HTMLInputElement>) {
-    const seleccionados = Array.from(event.target.files ?? []);
-
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-
+  async function procesarSeleccion(seleccionados: File[]) {
     if (seleccionados.length === 0) {
       return;
     }
@@ -82,23 +82,63 @@ export default function EvidenciasActividadInput({
     }
 
     for (const file of seleccionados) {
-      const validationError = validarArchivoEvidencia(file);
-
-      if (validationError) {
-        setError(validationError);
+      if (!file.type.startsWith("image/")) {
+        setError(`"${file.name}" no es una imagen válida.`);
         return;
       }
     }
 
+    setOptimizando(true);
     setError(null);
 
-    const nuevos = seleccionados.map((file) => ({
-      id: crearIdPendiente(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
+    try {
+      const optimizados = await optimizarImagenesEvidencia(seleccionados);
 
-    sincronizarArchivos([...pendientes, ...nuevos]);
+      for (const file of optimizados) {
+        const validationError = validarArchivoEvidencia(file);
+
+        if (validationError) {
+          setError(validationError);
+          return;
+        }
+      }
+
+      const nuevos = optimizados.map((file) => ({
+        id: crearIdPendiente(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+
+      sincronizarArchivos([...pendientes, ...nuevos]);
+    } catch (caught) {
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo optimizar la imagen seleccionada.";
+      setError(message);
+    } finally {
+      setOptimizando(false);
+    }
+  }
+
+  async function handleSeleccionArchivo(event: React.ChangeEvent<HTMLInputElement>) {
+    const seleccionados = Array.from(event.target.files ?? []);
+
+    if (inputArchivoRef.current) {
+      inputArchivoRef.current.value = "";
+    }
+
+    await procesarSeleccion(seleccionados);
+  }
+
+  async function handleCapturaCamara(event: React.ChangeEvent<HTMLInputElement>) {
+    const seleccionados = Array.from(event.target.files ?? []);
+
+    if (inputCamaraRef.current) {
+      inputCamaraRef.current.value = "";
+    }
+
+    await procesarSeleccion(seleccionados);
   }
 
   function eliminarPendiente(id: string) {
@@ -127,12 +167,13 @@ export default function EvidenciasActividadInput({
           <p className="text-sm font-medium text-zinc-700">Evidencias</p>
           {!esSidebar ? (
             <p className="mt-1 text-sm text-zinc-500">
-              Adjunta fotografías de respaldo. Máximo {EVIDENCIAS_MAX_ARCHIVOS} imágenes de{" "}
-              {Math.round(EVIDENCIAS_MAX_BYTES / (1024 * 1024))} MB cada una.
+              Toma fotos o selecciona archivos. Se optimizan antes de subir (máx.{" "}
+              {EVIDENCIAS_MAX_ARCHIVOS} imágenes de {Math.round(EVIDENCIAS_MAX_BYTES / (1024 * 1024))}{" "}
+              MB c/u).
             </p>
           ) : (
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Hasta {EVIDENCIAS_MAX_ARCHIVOS} fotos · {Math.round(EVIDENCIAS_MAX_BYTES / (1024 * 1024))} MB c/u
+              Hasta {EVIDENCIAS_MAX_ARCHIVOS} fotos · optimización automática
             </p>
           )}
         </div>
@@ -141,25 +182,53 @@ export default function EvidenciasActividadInput({
         </p>
       </div>
 
-      <button
-        type="button"
-        disabled={disabled || totalActual >= EVIDENCIAS_MAX_ARCHIVOS}
-        onClick={() => inputRef.current?.click()}
-        className={`w-full rounded-lg border border-zinc-300 bg-white font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 ${
-          esSidebar ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm"
-        }`}
-      >
-        Subir imágenes
-      </button>
+      <div className={`grid gap-2 ${esSidebar ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+        <button
+          type="button"
+          disabled={accionesDeshabilitadas}
+          onClick={() => inputCamaraRef.current?.click()}
+          className={`w-full rounded-lg border border-zinc-900 bg-zinc-900 font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 ${
+            esSidebar ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm"
+          }`}
+        >
+          Tomar foto
+        </button>
+        <button
+          type="button"
+          disabled={accionesDeshabilitadas}
+          onClick={() => inputArchivoRef.current?.click()}
+          className={`w-full rounded-lg border border-zinc-300 bg-white font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 ${
+            esSidebar ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm"
+          }`}
+        >
+          Seleccionar archivo
+        </button>
+      </div>
+
       <input
-        ref={inputRef}
+        ref={inputCamaraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCapturaCamara}
+        disabled={accionesDeshabilitadas}
+      />
+      <input
+        ref={inputArchivoRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         multiple
         className="hidden"
-        onChange={handleSeleccion}
-        disabled={disabled}
+        onChange={handleSeleccionArchivo}
+        disabled={accionesDeshabilitadas}
       />
+
+      {optimizando ? (
+        <p className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+          Optimizando imagen…
+        </p>
+      ) : null}
 
       {error ? (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -191,7 +260,7 @@ export default function EvidenciasActividadInput({
                   <p className="truncate text-[10px] text-zinc-600">{pendiente.file.name}</p>
                   <button
                     type="button"
-                    disabled={disabled}
+                    disabled={disabled || optimizando}
                     onClick={() => eliminarPendiente(pendiente.id)}
                     className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50"
                   >
@@ -210,7 +279,7 @@ export default function EvidenciasActividadInput({
             }`}
           >
             {esSidebar
-              ? "Las miniaturas aparecerán aquí al seleccionar fotos."
+              ? "Las miniaturas aparecerán aquí al tomar o seleccionar fotos."
               : "Aún no has seleccionado evidencias fotográficas."}
           </p>
         )}
