@@ -1,4 +1,14 @@
+import {
+  agruparActividadesPorEquivalenciaTemporal,
+  type OpcionesAgrupacionTemporal,
+} from "@/lib/agrupar-actividades-temporales-informe";
+import {
+  consolidarFechasEjecucion,
+  formatearFechaEjecucion,
+} from "@/lib/formatear-fecha-informe";
+import { parsearFrentesContextoTecnico } from "@/lib/parsear-frentes-contexto-tecnico";
 import type { Actividad } from "@/types/actividad";
+import type { ConfiguracionIAContext } from "@/types/configuracion-ia";
 import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia";
 import type {
   InformeMensualActividadFila,
@@ -93,23 +103,62 @@ export function mapearEvidenciasInforme(
   }));
 }
 
+export function mapearGrupoActividadesAFilaInforme(
+  actividades: Actividad[],
+  evidenciasPorActividad: Record<string, ActividadEvidenciaConSignedUrl[]>
+): InformeMensualActividadFila {
+  const actividadesOrdenadas = [...actividades].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const fechas = actividadesOrdenadas.map((actividad) => actividad.fecha);
+  const evidencias = actividadesOrdenadas.flatMap((actividad) =>
+    mapearEvidenciasInforme(evidenciasPorActividad[actividad.id] ?? [])
+  );
+  const esGrupoConsolidado = actividadesOrdenadas.length > 1;
+
+  return {
+    id: actividadesOrdenadas[0].id,
+    fecha: fechas[0],
+    fecha_ejecucion_etiqueta: esGrupoConsolidado
+      ? consolidarFechasEjecucion(fechas)
+      : formatearFechaEjecucion(fechas[0]),
+    redaccion_ia: actividadesOrdenadas[0].redaccion_ia,
+    actividades_origen_ids: esGrupoConsolidado
+      ? actividadesOrdenadas.map((actividad) => actividad.id)
+      : undefined,
+    evidencias,
+  };
+}
+
 export function mapearActividadAFilaInforme(
   actividad: Actividad,
   evidencias: ActividadEvidenciaConSignedUrl[]
 ): InformeMensualActividadFila {
+  return mapearGrupoActividadesAFilaInforme([actividad], {
+    [actividad.id]: evidencias,
+  });
+}
+
+export function crearOpcionesAgrupacionTemporal(
+  configuracion?: ConfiguracionIAContext | null
+): OpcionesAgrupacionTemporal {
+  const contextoTecnico = configuracion?.contexto_tecnico?.trim() ?? "";
+
+  if (!contextoTecnico) {
+    return {};
+  }
+
   return {
-    id: actividad.id,
-    fecha: actividad.fecha,
-    redaccion_ia: actividad.redaccion_ia,
-    evidencias: mapearEvidenciasInforme(evidencias),
+    frentesContexto: parsearFrentesContextoTecnico(contextoTecnico),
   };
 }
 
 export function construirObligacionesInformeContractual(
   obligacionesContrato: string[],
   grupos: Map<string, Actividad[]>,
-  evidenciasPorActividad: Record<string, ActividadEvidenciaConSignedUrl[]>
+  evidenciasPorActividad: Record<string, ActividadEvidenciaConSignedUrl[]>,
+  configuracion?: ConfiguracionIAContext | null
 ): InformeMensualObligacion[] {
+  const opcionesAgrupacion = crearOpcionesAgrupacionTemporal(configuracion);
+
   return obligacionesContrato.map((nombre) => {
     const actividadesGrupo = grupos.get(nombre) ?? [];
 
@@ -121,12 +170,10 @@ export function construirObligacionesInformeContractual(
       };
     }
 
-    const actividades = actividadesGrupo.map((actividad) =>
-      mapearActividadAFilaInforme(
-        actividad,
-        evidenciasPorActividad[actividad.id] ?? []
-      )
-    );
+    const actividades = agruparActividadesPorEquivalenciaTemporal(
+      actividadesGrupo,
+      opcionesAgrupacion
+    ).map((grupo) => mapearGrupoActividadesAFilaInforme(grupo, evidenciasPorActividad));
 
     return {
       nombre,

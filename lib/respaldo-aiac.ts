@@ -116,6 +116,7 @@ export function construirRespaldoAiac(
     objeto_contractual: contratoPayload.objeto_contractual,
     obligaciones: contratoPayload.obligaciones,
     instrucciones_informe: configuracionPayload.instrucciones_informe,
+    estilo_redaccion: configuracionPayload.estilo_redaccion,
     ejemplos_redaccion: configuracionPayload.ejemplos_redaccion,
     contexto_tecnico: configuracionPayload.contexto_tecnico,
   };
@@ -252,6 +253,7 @@ function validarExportConfiguracion(
   const objetoContractual = leerCampoString(record, "objeto_contractual");
   const obligaciones = leerCampoString(record, "obligaciones");
   const instruccionesInforme = leerCampoString(record, "instrucciones_informe");
+  const estiloRedaccion = leerCampoString(record, "estilo_redaccion", false) ?? "";
   const ejemplosRedaccion = leerCampoString(record, "ejemplos_redaccion");
   const contextoTecnico = leerCampoString(record, "contexto_tecnico");
 
@@ -276,6 +278,7 @@ function validarExportConfiguracion(
     objeto_contractual: objetoContractual,
     obligaciones,
     instrucciones_informe: instruccionesInforme,
+    estilo_redaccion: estiloRedaccion,
     ejemplos_redaccion: ejemplosRedaccion,
     contexto_tecnico: contextoTecnico,
   };
@@ -315,7 +318,9 @@ export function respaldoImportableAFilas(
     },
     configuracion: {
       instrucciones_informe: respaldo.instrucciones_informe,
-      estilo_redaccion: estiloRedaccionActual,
+      estilo_redaccion: respaldo.estilo_redaccion.trim()
+        ? respaldo.estilo_redaccion
+        : estiloRedaccionActual,
       ejemplos_redaccion: respaldo.ejemplos_redaccion,
       contexto_tecnico: respaldo.contexto_tecnico,
     },

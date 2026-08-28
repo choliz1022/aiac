@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { generarInformeMensual } from "@/app/(dashboard)/informe-mensual/actions";
 import InformeMensualPreview from "@/components/informe-mensual-preview";
-import { exportarInformeMensualDocx } from "@/lib/exportar-informe-docx";
+import { generarInformeMensual } from "@/app/(dashboard)/informe-mensual/actions";
 import type { InformeMensualData } from "@/types/informe-mensual";
 
 type InformeMensualFormProps = {
@@ -81,7 +80,44 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
     setMensaje(null);
 
     try {
-      await exportarInformeMensualDocx(informe);
+      const response = await fetch("/api/informe-mensual/docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mes, anio }),
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMensaje({
+          type: "error",
+          text: payload?.error ?? "No se pudo generar el informe en DOCX.",
+        });
+        return;
+      }
+
+      const imagenesEmbebidas = Number(response.headers.get("X-Imagenes-Embedidas") ?? "0");
+      const imagenesOmitidas = Number(response.headers.get("X-Imagenes-Omitidas") ?? "0");
+      const filenameHeader = response.headers.get("X-Filename");
+      const filename = filenameHeader
+        ? decodeURIComponent(filenameHeader)
+        : "Informe_Mensual.docx";
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement("a");
+
+      enlace.href = url;
+      enlace.download = filename;
+      enlace.click();
+      URL.revokeObjectURL(url);
+
+      setMensaje({
+        type: imagenesOmitidas > 0 ? "info" : "info",
+        text:
+          imagenesOmitidas > 0
+            ? `DOCX descargado con ${imagenesEmbebidas} imagen(es) embebida(s). ${imagenesOmitidas} no pudieron incluirse.`
+            : `DOCX descargado con ${imagenesEmbebidas} imagen(es) embebida(s).`,
+      });
     } catch (error) {
       const text =
         error instanceof Error ? error.message : "No se pudo descargar el informe en DOCX.";

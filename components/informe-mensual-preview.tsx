@@ -1,8 +1,12 @@
-import type { InformeMensualData } from "@/types/informe-mensual";
+import type { InformeMensualActividadFila, InformeMensualData } from "@/types/informe-mensual";
 
 type InformeMensualPreviewProps = {
   informe: InformeMensualData;
 };
+
+function obtenerRedaccionesActividad(actividad: InformeMensualActividadFila): string[] {
+  return actividad.redacciones_ia ?? [actividad.redaccion_ia];
+}
 
 export default function InformeMensualPreview({ informe }: InformeMensualPreviewProps) {
   return (
@@ -75,7 +79,16 @@ export default function InformeMensualPreview({ informe }: InformeMensualPreview
                     {obligacion.actividades.map((actividad) => (
                       <tr key={actividad.id} className="informe-fila-actividad align-top">
                         <td className="border border-zinc-300 px-4 py-3 leading-7 text-zinc-800">
-                          <p className="whitespace-pre-wrap">{actividad.redaccion_ia}</p>
+                          <div className="space-y-3">
+                            {obtenerRedaccionesActividad(actividad).map((redaccion, indice) => (
+                              <p key={`${actividad.id}-redaccion-${indice}`} className="whitespace-pre-wrap">
+                                {redaccion}
+                              </p>
+                            ))}
+                            <p className="text-xs text-zinc-500">
+                              {actividad.fecha_ejecucion_etiqueta}
+                            </p>
+                          </div>
                         </td>
                         <td className="border border-zinc-300 px-4 py-3">
                           {actividad.evidencias.length > 0 ? (

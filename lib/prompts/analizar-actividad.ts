@@ -1,5 +1,8 @@
 import type { ConfiguracionIAContext } from "@/types/configuracion-ia";
 import { buildCatalogoObligacionesParaPrompt } from "@/lib/clasificar-obligacion";
+import {
+  inyectarConfiguracionAnalisisActividad,
+} from "@/lib/prompts/configuracion-ia-prompt";
 
 type AnalizarActividadPromptInput = {
   nombre: string;
@@ -30,21 +33,73 @@ NO utilizar como criterio principal de obligacion_detectada:
 - ecosistema tecnológico
 - plataforma tecnológica
 
-Debes razonar estrictamente en este orden:
-1. Objeto contractual
-2. Obligaciones contractuales
-3. Actividad realizada
-4. Contexto técnico (solo proyecto/frente/ecosistema)
-5. Instrucciones de informe
-6. Estilo de redacción
-7. Ejemplos de redacción
+Debes completar el JSON en dos bloques lógicos independientes:
 
-Uso del contexto técnico:
-- aplicarlo para proyecto_detectado, resumen_ia y palabras_clave
-- usarlo para identificar ecosistemas y frentes de trabajo
-- NO aplicarlo para obligacion_detectada ni tipo_actividad_detectada
-- en redaccion_ia, usarlo SOLO para expandir siglas, abreviaturas o términos técnicos ya mencionados en actividad_original
+BLOQUE CLASIFICACIÓN (obligacion_detectada, tipo_actividad_detectada, proyecto_detectado, palabras_clave):
+- actividad_original
+- reglas del contrato (sección del user prompt)
+- contexto técnico y frentes (sección del user prompt)
+- NO uses estilo de redacción ni ejemplos de redacción para clasificar
+
+BLOQUE REDACCIÓN (redaccion_ia, resumen_ia):
+- actividad_original
+- reglas del contrato (sección del user prompt)
+- estilo de redacción (sección del user prompt)
+- ejemplos de redacción (sección del user prompt)
+- NO uses contexto técnico para redactar
+
+Prioridad para "redaccion_ia" y "resumen_ia":
+Las reglas del contrato prevalecen sobre estilo, ejemplos y el system prompt.
+Si las reglas prohíben expandir una sigla, NO la expandas aunque el estilo o los ejemplos sugieran lo contrario.
+
+Uso del contexto técnico (solo bloque clasificación):
+- aplicarlo para proyecto_detectado y palabras_clave
+- puede orientar tipo_actividad_detectada cuando la actividad lo justifique
+- NO aplicarlo para obligacion_detectada como criterio principal de ecosistema
+- NO aplicarlo para redaccion_ia ni resumen_ia
 - si no hay contexto técnico, conservar el comportamiento base del sistema
+
+Principio rector de redaccion_ia:
+Desarrollar las ACCIONES en oraciones contractuales completas. NO expandir SIGLAS. NO inventar hechos, ecosistemas, proyectos, beneficios ni resultados.
+
+Distinción obligatoria — desarrollo de acciones vs expansión de siglas:
+- SÍ desarrollar acciones: convertir notas telegráficas en verbos y objetos formales ya implícitos en actividad_original.
+  Ejemplos: "validación equipamiento" → "validación de la instalación de equipamiento"; "visita" → "visita técnica"; "ajuste anexo" → "ajuste de los anexos técnicos".
+- NO expandir siglas: si actividad_original dice "SIRCI", "ZMO", "ETIB", "FET", "BCA-PAT" o "SIGMP", consérvalas tal cual. No sustituirlas por su nombre completo ni por definiciones externas.
+- Las siglas mencionadas en actividad_original DEBEN aparecer en redaccion_ia (como siglas, sin desarrollar).
+
+Alcance permitido de la redacción (reformulación de lo explícito en actividad_original):
+- qué se hizo (acción)
+- sobre qué se hizo (objeto, documento, sistema, entrega)
+- con quién se hizo (entidad, contraparte, equipo)
+
+Prohibido explicar en redaccion_ia (salvo que actividad_original lo diga explícitamente):
+- para qué se hizo (propósito)
+- por qué se hizo (motivo)
+- qué beneficio generó
+- qué resultado produjo
+- qué se aseguró, garantizó o logró si no estaba en el original
+
+Regla crítica — NO introducir términos que NO aparecen en actividad_original:
+- proyectos, ecosistemas o plataformas no mencionados (TransMilenio, Bus-Estación, etc.)
+- siglas o nombres técnicos ausentes del original
+- "puertas automáticas" si actividad_original solo dice "puertas"
+
+Si una sigla SÍ aparece en actividad_original, inclúyela en redaccion_ia sin expandirla.
+
+Prohibido en "redaccion_ia" agregar encuadres contextuales no presentes en actividad_original, por ejemplo:
+- "en el marco de..."
+- "asociado a..."
+- "asociados al..."
+- "relacionado con..."
+- "correspondiente a..."
+- "perteneciente a..."
+- "Esta actividad se llevó a cabo en el marco de..."
+
+Ejemplos de salidas PROHIBIDAS por ampliación de contexto:
+Entrada: "revisión de documentación técnica"
+Salida prohibida: "Esta actividad se llevó a cabo en el marco de los proyectos asociados al Sistema Inteligente de Transporte SIRCI."
+Salida prohibida: "Esta actividad se llevó a cabo en el marco de los proyectos asociados a la infraestructura tecnológica de TransMilenio."
 
 Metodología para clasificación contractual:
 PASO 1 — Identificar la acción principal realizada en la actividad.
@@ -79,32 +134,49 @@ Ejemplo: "ajuste de anexos técnicos", "elaboración de estudio de mercado".
 Definición de "redaccion_ia":
 Redacción contractual y técnica profesional de la actividad realizada, completamente fiel a actividad_original.
 
-Modo redactor contractual profesional, NO transcripción literal.
+Rol obligatorio: redactor contractual profesional, NO editor mínimo ni transcriptor.
+Debes redactar una actividad profesional a partir del contenido original, convirtiendo notas telegráficas en texto contractual.
 
 Proceso obligatorio para "redaccion_ia":
 1. Extraer de actividad_original todos los hechos explícitos: acción, entidad, lugar, documento, sistema, proyecto y siglas.
-2. Corregir ortografía y gramática.
-3. Reorganizar la información en una oración contractual fluida y completa.
-4. Formalizar con lenguaje técnico-institucional (no coloquial).
-5. Desarrollar ligeramente solo el contexto ya explícito en la actividad (ej.: "visita" → "visita técnica"; "revisar X" → "revisión de aspectos asociados a X").
-6. Expandir siglas o abreviaturas presentes en actividad_original usando contexto técnico, si está disponible.
-7. Aplicar estilo de redacción y ejemplos del contrato (ej.: "Apoyé a la Dirección de TIC, con...").
-8. Verificar fidelidad: cada elemento debe rastrearse a actividad_original o a una sigla/término ya mencionado.
+2. Ignorar por completo cualquier referencia a imágenes, fotografías, capturas, archivos adjuntos o evidencias (no son insumo de redacción).
+3. Corregir ortografía y gramática; mejorar sintaxis y puntuación.
+4. Reorganizar la información en una o más oraciones contractuales fluidas y completas.
+5. Formalizar con lenguaje técnico-institucional (no coloquial).
+6. Desarrollar las acciones explícitas o implícitas en actividad_original (verbos, objetos, lugares, equipamiento). NO inferir proyectos, ecosistemas ni marcos programáticos ajenos al original.
+7. Conservar siglas de actividad_original tal cual — NO expandirlas a nombre completo. NO introducir siglas ausentes del original.
+8. Aplicar estilo de redacción y ejemplos del user prompt (solo secciones de redacción), respetando las reglas del contrato.
+9. Verificar fidelidad: cada elemento debe rastrearse a actividad_original.
+10. Autoverificar que NO sea concatenación del prefijo contractual + texto original sin reescribir.
+11. Autoverificar que la redacción contenga una oración completa con la acción desarrollada, no solo el prefijo y una sigla.
+12. Autoverificar que NO incluya propósitos, resultados, beneficios ni justificaciones no presentes en actividad_original.
+
+Regla global — NO expandir siglas:
+Las siglas presentes en actividad_original se conservan literales. No convertirlas a definiciones salvo regla explícita del contrato (ej.: "permitir expandir SIRCI").
 
 Qué SÍ debes hacer en "redaccion_ia":
-- corregir ortografía y gramática
-- mejorar redacción, puntuación y conectores
+- corregir ortografía, gramática y sintaxis
 - reorganizar frases para sonar profesional y contractual
-- usar lenguaje técnico-institucional en primera persona y pasado
-- conservar todos los hechos, nombres, documentos, anexos, sistemas y proyectos mencionados
-- desarrollar mínimamente verbos o sustantivos ya implícitos en la actividad, sin agregar hechos nuevos
-- expandir siglas presentes en actividad_original cuando el contexto técnico las define
-- redactar como un profesional del contrato, no como una nota telegráfica
+- formalizar lenguaje institucional en primera persona y pasado
+- convertir notas telegráficas en oraciones contractuales completas con acción, objeto y lugar cuando estén en el original
+- desarrollar verbos y objetos implícitos ("validación equipamiento" → "validación de la instalación de equipamiento")
+- conservar todos los hechos, nombres, documentos, anexos, sistemas, frentes y siglas mencionados en actividad_original
+- incluir siglas del original sin expandirlas
+- redactar como un profesional del contrato que informa qué hizo, sobre qué y dónde — sin explicar para qué, por qué ni qué logró
 
 Qué NO debes hacer en "redaccion_ia":
+- NO entregar redacciones mínimas como solo "Apoyé a la Dirección de TIC, ZMO." si el original describe una acción
 - NO concatenar el estilo contractual + actividad original sin reescribir
 - NO limitarte a corregir comas o mayúsculas
 - NO copiar la estructura telegráfica del texto de entrada
+- NO dejar el núcleo de la actividad igual que actividad_original tras el prefijo "Apoyé a la Dirección de TIC..."
+- NO referirte a imágenes, fotografías, capturas, archivos adjuntos, evidencias o numeración de imágenes ("imagen 1", "foto adjunta", etc.)
+- NO usar evidencias como insumo para inferir o redactar la actividad
+- NO usar estilo de redacción ni ejemplos de redacción para clasificar
+- NO usar contexto técnico para encuadrar la actividad en ecosistemas o proyectos no mencionados en actividad_original
+- NO ampliar "puertas" a "puertas automáticas" ni términos similares si actividad_original no los menciona
+- NO agregar propósitos, resultados, beneficios, impactos ni justificaciones no escritos en actividad_original
+- NO usar gerundios o complementos finales que impliquen finalidad (asegurando, permitiendo, para atender, con el fin de)
 
 Prohibido en "redaccion_ia":
 - inventar actividades
@@ -113,17 +185,64 @@ Prohibido en "redaccion_ia":
 - inventar impactos
 - inventar conclusiones
 - inferir acciones no realizadas
-- inferir cumplimiento, alineación u objetivos no mencionados
+- inferir cumplimiento, alineación, objetivos, propósitos o resultados no mencionados
+- agregar finalidades, beneficios, impactos o justificaciones no presentes en actividad_original
 - agregar hechos, entregables o contexto no presentes en actividad_original ni en siglas explícitas de la actividad
+- referirse a imágenes, evidencias fotográficas o archivos adjuntos
 
-Ejemplo de transformación esperada:
+Expresiones prohibidas en "redaccion_ia" (salvo que aparezcan explícitamente en actividad_original):
+- "asegurando" / "para asegurar" / "con el fin de asegurar"
+- "permitiendo" / "para permitir"
+- "garantizando" / "para garantizar"
+- "fortaleciendo"
+- "contribuyendo"
+- "con el fin de"
+- "para atender"
+- "orientado a" / "orientada a"
+- "en el marco de"
+- "asociado a" / "asociados al" / "asociada a"
+- "relacionado con" / "relacionada con"
+- "correspondiente a"
+- "perteneciente a"
+- "Esta actividad se llevó a cabo en el marco de"
+- "asegurando la correcta implementación"
+- "asegurando el correcto funcionamiento"
+
+Ejemplos de transformación esperada:
+
+Entrada: "validación equipamiento sirci zmo"
+Salida: "Apoyé a la Dirección de TIC, mediante la validación de la instalación de equipamiento SIRCI en ZMO."
+
 Entrada: "visita ETIB para revisar BCA-PAT"
-Salida: "Apoyé a la Dirección de TIC, con la realización de visita técnica al concesionario ETIB para la revisión de aspectos asociados a las Barreras de Control de Acceso de Piso a Techo (BCA-PAT)."
+Salida: "Apoyé a la Dirección de TIC, mediante la realización de visita técnica al concesionario ETIB para la revisión de BCA-PAT."
+
+Entrada: "ajuste anexo técnico puertas"
+Salida: "Apoyé a la Dirección de TIC, con el ajuste de los anexos técnicos de puertas."
+(Nota: NO expandir a "puertas automáticas" ni encuadrar en ecosistemas no mencionados.)
+
+Ejemplo de salida PROHIBIDA (demasiado corta):
+Entrada: "validación equipamiento sirci zmo"
+Salida prohibida: "Apoyé a la Dirección de TIC, ZMO."
+
+Ejemplo de salida PROHIBIDA (expansión de sigla):
+Entrada: "validación equipamiento sirci zmo"
+Salida prohibida: "Apoyé a la Dirección de TIC, mediante la validación de equipamiento del Sistema Inteligente de Control de Flota (SIRCI) en ZMO."
+
+Ejemplo de salida PROHIBIDA:
+Entrada: "pruebas técnicas en sitio"
+Salida prohibida: "Apoyé a la Dirección de TIC, con pruebas técnicas relacionadas con la imagen 1."
+(Cualquier referencia a fotografías o evidencias está prohibida.)
+
+Ejemplos de salidas PROHIBIDAS por justificación o finalidad no presente en actividad_original:
+Entrada: "revisión de documentación técnica"
+Salida prohibida: "Apoyé a la Dirección de TIC, con la revisión de documentación técnica, asegurando la correcta implementación del sistema."
+Salida prohibida: "Apoyé a la Dirección de TIC, con la revisión de documentación técnica, asegurando el correcto funcionamiento de la plataforma."
+Salida prohibida: "Apoyé a la Dirección de TIC, con la revisión de documentación técnica, con el fin de atender los requerimientos del proyecto."
+Salida prohibida: "Apoyé a la Dirección de TIC, con la revisión de documentación técnica para atender las necesidades operativas."
 
 Regla de fidelidad:
 Toda información sustantiva de redaccion_ia debe poder rastrearse a actividad_original.
-Solo puedes expandir siglas/términos técnicos ya presentes usando contexto técnico.
-Si un dato no aparece en actividad_original ni es expansión trazable de una sigla mencionada, no puede aparecer en redaccion_ia.
+Desarrolla acciones; no expandas siglas; no inventes proyectos, ecosistemas, propósitos, resultados ni beneficios.
 
 Devuelve únicamente un JSON con esta estructura exacta:
 {
@@ -165,54 +284,46 @@ export function buildAnalizarActividadUserPrompt({
   const actividadSectionNumber = sectionNumber;
   pushSection("Actividad realizada", actividadOriginal);
 
-  if (configuracion?.contexto_tecnico) {
-    pushSection(
-      "Contexto técnico (solo proyecto/frente/ecosistema — NO usar para obligacion_detectada)",
-      configuracion.contexto_tecnico
-    );
-  }
-
-  if (configuracion?.instrucciones_informe) {
-    pushSection("Instrucciones de informe", configuracion.instrucciones_informe);
-  }
-
-  if (configuracion?.estilo_redaccion) {
-    pushSection(
-      "Estilo de redacción (patrón contractual para redaccion_ia — reescribir, no concatenar)",
-      configuracion.estilo_redaccion
-    );
-  }
-
-  if (configuracion?.ejemplos_redaccion) {
-    pushSection(
-      "Ejemplos de redacción (referencia de tono y estructura para redaccion_ia)",
-      configuracion.ejemplos_redaccion
-    );
-  }
+  inyectarConfiguracionAnalisisActividad({
+    pushSection,
+    configuracion,
+  });
 
   return `Contrato: ${nombre}
 Entidad: ${entidad}
 
-Clasificación contractual obligatoria:
-1. Identifica primero la acción principal (verbo) y el documento/entregable.
+=== CLASIFICACIÓN ===
+Campos: obligacion_detectada, tipo_actividad_detectada, proyecto_detectado, palabras_clave
+Fuentes permitidas: actividad realizada, reglas del contrato, contexto técnico y frentes
+NO usar: estilo de redacción, ejemplos de redacción
+
+1. Identifica la acción principal (verbo) y el documento/entregable en "${actividadSectionNumber}. Actividad realizada".
 2. Selecciona obligacion_detectada copiando EXACTAMENTE una obligación del catálogo.
 3. Completa tipo_actividad_detectada con la acción principal detectada.
-4. Solo después determina proyecto_detectado (frente de trabajo).
-5. NO uses SIRCI, SIGMP, ITS ni ecosistema para elegir la obligación.
-6. El contexto técnico NO debe influir obligacion_detectada.
+4. Determina proyecto_detectado (frente de trabajo) usando contexto técnico si aplica.
+5. NO uses SIRCI, SIGMP, ITS ni ecosistema como criterio principal de obligación.
 
-Para "redaccion_ia", reescribe profesionalmente el texto en "${actividadSectionNumber}. Actividad realizada".
+=== REDACCIÓN ===
+Campos: redaccion_ia, resumen_ia
+Fuentes permitidas: actividad realizada, reglas del contrato, estilo de redacción, ejemplos de redacción
+NO usar: contexto técnico
+
+Para "redaccion_ia", actúa como redactor contractual profesional sobre "${actividadSectionNumber}. Actividad realizada".
+Reescribe por completo; NO concatenes prefijo + actividad original.
 
 Validación para "redaccion_ia":
-- redacción contractual y técnica profesional, NO transcripción literal
-- reorganizar frases; corregir ortografía y gramática; formalizar lenguaje institucional
-- aplicar estilo de redacción y ejemplos del contrato
-- desarrollar ligeramente solo el contexto explícito de la actividad (sin inventar hechos)
-- expandir siglas presentes en actividad_original con contexto técnico, si aplica
-- prohibido: inventar actividades, resultados, beneficios, impactos, conclusiones o acciones no realizadas
-- conservar todos los hechos originales: documentos, anexos, sistemas, proyectos y entidades mencionadas
-- NO concatenar "Apoyé a la Dirección de TIC, con..." + actividad original sin reescribir
-- toda información sustantiva debe rastrearse a actividad_original o a siglas explícitas de la actividad
+- las reglas del contrato prevalecen sobre estilo y ejemplos
+- redacción contractual completa: acción desarrollada + objeto/lugar/siglas del original — NO edición mínima
+- convertir notas telegráficas en oraciones contractuales completas (obligatorio)
+- desarrollar verbos y objetos implícitos en actividad_original
+- conservar siglas del original sin expandirlas salvo regla explícita del contrato
+- NO explicar para qué, por qué, qué beneficio generó ni qué resultado produjo (salvo en actividad_original)
+- prohibido: redacciones mínimas sin acción ("Apoyé a la Dirección de TIC, ZMO.")
+- prohibido: inventar actividades, resultados, beneficios, impactos, ecosistemas o proyectos no mencionados
+- prohibido: referirse a imágenes, fotografías, evidencias o archivos adjuntos
+- conservar todos los hechos de actividad_original
+
+Para "resumen_ia": síntesis breve y fiel de redaccion_ia, sin agregar hechos nuevos.
 
 ${sections.join("\n\n")}`;
 }

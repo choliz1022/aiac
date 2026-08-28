@@ -9,20 +9,20 @@ type ConfiguracionIAFormProps = {
 };
 
 const emptyForm: ConfiguracionIAFormData = {
-  estilo_redaccion: "",
-  ejemplos_redaccion: "",
   instrucciones_informe: "",
   contexto_tecnico: "",
+  estilo_redaccion: "",
+  ejemplos_redaccion: "",
 };
 
 export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFormProps) {
   const [form, setForm] = useState<ConfiguracionIAFormData>(
     configuracion
       ? {
-          estilo_redaccion: configuracion.estilo_redaccion,
-          ejemplos_redaccion: configuracion.ejemplos_redaccion,
           instrucciones_informe: configuracion.instrucciones_informe,
           contexto_tecnico: configuracion.contexto_tecnico,
+          estilo_redaccion: configuracion.estilo_redaccion,
+          ejemplos_redaccion: configuracion.ejemplos_redaccion,
         }
       : emptyForm
   );
@@ -84,7 +84,7 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
           htmlFor="instrucciones_informe"
           className="block text-sm font-medium text-zinc-700"
         >
-          Instrucciones de informe
+          Reglas del contrato
         </label>
         <textarea
           id="instrucciones_informe"
@@ -92,11 +92,42 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
           rows={8}
           value={form.instrucciones_informe}
           onChange={(event) => handleChange("instrucciones_informe", event.target.value)}
-          placeholder="Indica lineamientos generales para la redacción de informes mensuales..."
+          placeholder={`No asociar actividades del ecosistema SIRCI a la obligación 1.
+No expandir siglas en redacción salvo que aparezcan desarrolladas en la actividad original.
+Agrupar en informe por frente de trabajo y tipo de actividad.
+No inventar resultados, beneficios ni impactos.`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
         <p className="text-sm leading-6 text-zinc-500">
-          Define criterios generales que la IA debe respetar al redactar actividades e informes.
+          Reglas de clasificación, redacción y consolidación. Tienen prioridad sobre el
+          comportamiento base del sistema.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="contexto_tecnico" className="block text-sm font-medium text-zinc-700">
+          Contexto técnico y frentes
+        </label>
+        <textarea
+          id="contexto_tecnico"
+          name="contexto_tecnico"
+          rows={12}
+          value={form.contexto_tecnico}
+          onChange={(event) => handleChange("contexto_tecnico", event.target.value)}
+          placeholder={`Ecosistema: SIRCI
+Frentes: Masivo Capital (alias: MarcoPolo), ZMO, ETIB, FET, BCA-PAT
+
+Ecosistema: SIGMP
+Frentes: Puertas automáticas, ITS de puertas
+
+Agrupación:
+- Mismo proyecto no implica consolidar en una sola fila
+- Masivo Capital y ZMO son frentes distintos`}
+          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+        />
+        <p className="text-sm leading-6 text-zinc-500">
+          Ecosistemas, frentes de trabajo, siglas y criterios de agrupación. No define el estilo
+          de redacción.
         </p>
       </div>
 
@@ -110,20 +141,14 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
           rows={10}
           value={form.estilo_redaccion}
           onChange={(event) => handleChange("estilo_redaccion", event.target.value)}
-          placeholder={`Las actividades deben redactarse en primera persona.
-
-Mantener lenguaje institucional.
-
-Utilizar expresiones como:
-Apoyé la Dirección de TIC, con...
-
-Evitar lenguaje informal.
-
-No inventar resultados ni entregables.`}
+          placeholder={`Redactar en primera persona del singular, tiempo pasado.
+Prefijo contractual: Apoyé a la Dirección de TIC, mediante...
+Conectores preferidos: mediante, con la, para la
+Lenguaje institucional y técnico.`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
         <p className="text-sm leading-6 text-zinc-500">
-          Describe cómo prefieres que se redacten tus actividades contractuales.
+          Define persona, tiempo verbal, prefijos y conectores contractuales.
         </p>
       </div>
 
@@ -137,36 +162,15 @@ No inventar resultados ni entregables.`}
           rows={10}
           value={form.ejemplos_redaccion}
           onChange={(event) => handleChange("ejemplos_redaccion", event.target.value)}
-          placeholder={`Apoyé la Dirección de TIC, con la revisión técnica de los informes de interventoría...
+          placeholder={`Entrada: validación equipamiento sirci zmo
+Salida: Apoyé a la Dirección de TIC, mediante la validación de la instalación de equipamiento SIRCI en ZMO.
 
-Apoyé la Dirección de TIC, con la gestión y articulación técnica para...`}
+Entrada: visita ETIB revisión BCA-PAT
+Salida: Apoyé a la Dirección de TIC, mediante la realización de visita técnica al concesionario ETIB para la revisión de BCA-PAT.`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
         <p className="text-sm leading-6 text-zinc-500">
-          Pega ejemplos reales que representen tu estilo de redacción.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="contexto_tecnico" className="block text-sm font-medium text-zinc-700">
-          Contexto técnico
-        </label>
-        <textarea
-          id="contexto_tecnico"
-          name="contexto_tecnico"
-          rows={12}
-          value={form.contexto_tecnico}
-          onChange={(event) => handleChange("contexto_tecnico", event.target.value)}
-          placeholder={`Audio Zonal pertenece al ecosistema SIRCI.
-RFID pertenece a Bus-Estación.
-BCA-PAT pertenece al ecosistema SIRCI.
-Compartir SIRCI no implica que dos actividades deban consolidarse.
-FET y Audio Zonal son frentes distintos.`}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-        />
-        <p className="text-sm leading-6 text-zinc-500">
-          Define reglas de negocio de tu contrato para clasificación, identificación de frentes y
-          consolidación. No afecta la redacción de actividades.
+          Ejemplos reales de entrada y salida que sirven como referencia para la redacción.
         </p>
       </div>
 

@@ -1,0 +1,147 @@
+warning: in the working copy of 'app/(dashboard)/configuracion-ia/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/informe-mensual/actions.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/registrar-actividad/actions.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/configuracion-ia-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/informe-mensual-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/informe-mensual-preview.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/registrar-actividad-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/analizar-actividad.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/configuracion-ia.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/exportar-informe-docx.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/informe-mensual.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/pipeline-analisis-actividad.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/prompts/analizar-actividad.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/respaldo-aiac.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'next.config.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'types/analisis-actividad.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'types/informe-mensual.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'types/respaldo-aiac.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/app/(dashboard)/configuracion-ia/page.tsx b/app/(dashboard)/configuracion-ia/page.tsx[m
+[1mindex 93eebe7..fb3faac 100644[m
+[1m--- a/app/(dashboard)/configuracion-ia/page.tsx[m
+[1m+++ b/app/(dashboard)/configuracion-ia/page.tsx[m
+[36m@@ -21,7 +21,8 @@[m [mexport default async function ConfiguracionIAPage() {[m
+       <header>[m
+         <h1 className="text-3xl font-semibold text-zinc-900">Configuración IA</h1>[m
+         <p className="mt-2 text-sm text-zinc-600">[m
+[31m-          Personaliza el estilo de redacción que AIAC utilizará al analizar tus actividades.[m
+[32m+[m[32m          Define reglas del contrato, contexto técnico, estilo y ejemplos que AIAC utiliza al[m
+[32m+[m[32m          analizar actividades.[m
+         </p>[m
+       </header>[m
+ [m
+[1mdiff --git a/app/(dashboard)/informe-mensual/actions.ts b/app/(dashboard)/informe-mensual/actions.ts[m
+[1mindex 20c7049..72d4052 100644[m
+[1m--- a/app/(dashboard)/informe-mensual/actions.ts[m
+[1m+++ b/app/(dashboard)/informe-mensual/actions.ts[m
+[36m@@ -8,7 +8,9 @@[m [mimport {[m
+   construirObligacionesInformeContractual,[m
+   parseObligacionesContrato,[m
+ } from "@/lib/informe-mensual";[m
+[32m+[m[32mimport { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";[m
+ import { createClient } from "@/lib/supabase/server";[m
+[32m+[m[32mimport type { ConfiguracionIAContext } from "@/types/configuracion-ia";[m
+ import type { Actividad } from "@/types/actividad";[m
+ import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia";[m
+ import type {[m
+[36m@@ -93,7 +95,8 @@[m [masync function adjuntarSignedUrlsPorActividad([m
+ [m
+ async function construirInformePorObligaciones([m
+   contrato: ContratoInforme,[m
+[31m-  actividades: Actividad[][m
+[32m+[m[32m  actividades: Actividad[],[m
+[32m+[m[32m  configuracion: ConfiguracionIAContext | null[m
+ ): Promise<InformeMensualObligacion[]> {[m
+   const obligacionesContrato = parseObligacionesContrato(contrato.obligaciones);[m
+ [m
+[36m@@ -117,7 +120,8 @@[m [masync function construirInformePorObligaciones([m
+   return construirObligacionesInformeContractual([m
+     obligacionesContrato,[m
+     grupos,[m
+[31m-    evidenciasConUrl[m
+[32m+[m[32m    evidenciasConUrl,[m
+[32m+[m[32m    configuracion[m
+   );[m
+ }[m
+ [m
+[36m@@ -146,7 +150,12 @@[m [mexport async function generarInformeMensual([m
+       return { success: true, sinActividades: true };[m
+     }[m
+ [m
+[31m-    const obligaciones = await construirInformePorObligaciones(contrato, actividades);[m
+[32m+[m[32m    const configuracion = toConfiguracionIAContext(await getConfiguracionIA());[m
+[32m+[m[32m    const obligaciones = await construirInformePorObligaciones([m
+[32m+[m[32m      contrato,[m
+[32m+[m[32m      actividades,[m
+[32m+[m[32m      configuracion[m
+[32m+[m[32m    );[m
+ [m
+     const informe = construirInformeMensual({[m
+       contrato,[m
+[1mdiff --git a/app/(dashboard)/registrar-actividad/actions.ts b/app/(dashboard)/registrar-actividad/actions.ts[m
+[1mindex f72b376..d84dfd5 100644[m
+[1m--- a/app/(dashboard)/registrar-actividad/actions.ts[m
+[1m+++ b/app/(dashboard)/registrar-actividad/actions.ts[m
+[36m@@ -6,14 +6,24 @@[m [mimport {[m
+   camposPersistenciaDesdeAnalisis,[m
+   contratoEstaCompleto,[m
+   ejecutarAnalisisActividad,[m
+[32m+[m[32m  ejecutarAnalisisActividadParaPresentacion,[m
+   obtenerContratoActivo,[m
+[32m+[m[32m  regenerarRedaccionActividadParaPresentacion,[m
+ } from "@/lib/pipeline-analisis-actividad";[m
+[32m+[m[32mimport { validarAnalisisActividadEntrada } from "@/lib/validar-analisis-actividad";[m
+ import { createClient } from "@/lib/supabase/server";[m
+ import type {[m
+[32m+[m[32m  AnalizarActividadPreviewInput,[m
+[32m+[m[32m  AnalizarActividadPreviewResult,[m
+   AnalizarYGuardarActividadInput,[m
+   AnalizarYGuardarActividadResult,[m
+[32m+[m[32m  AnalisisActividadResult,[m
+[32m+[m[32m  GuardarActividadConfirmadaInput,[m
+[32m+[m[32m  GuardarActividadConfirmadaResult,[m
+   GuardarReferenciasEvidenciasInput,[m
+   GuardarReferenciasEvidenciasResult,[m
+[32m+[m[32m  ReanalizarRedaccionActividadInput,[m
+[32m+[m[32m  ReanalizarRedaccionActividadResult,[m
+ } from "@/types/analisis-actividad";[m
+ [m
+ async function getAuthenticatedUserId(): Promise<string | null> {[m
+[36m@@ -49,9 +59,134 @@[m [masync function actividadPerteneceAlUsuario([m
+   return true;[m
+ }[m
+ [m
+[31m-export async function analizarYGuardarActividad([m
+[31m-  input: AnalizarYGuardarActividadInput[m
+[31m-): Promise<AnalizarYGuardarActividadResult> {[m
+[32m+[m[32masync function obtenerContratoYUsuario(): Promise<[m
+[32m+[m[32m  | {[m
+[32m+[m[32m      contrato: NonNullable<Awaited<ReturnType<typeof obtenerContratoActivo>>>;[m
+[32m+[m[32m      userId: string;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  | { error: string }[m
+[32m+[m[32m> {[m
+[32m+[m[32m  const supabase = await createClient();[m
+[32m+[m[32m  const contrato = await obtenerContratoActivo(supabase);[m
+[32m+[m
+[32m+[m[32m  if (!contrato || !contratoEstaCompleto(contrato)) {[m
+[32m+[m[32m    return { error: "No hay un contrato activo completo configurado." };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const userId = await getAuthenticatedUserId();[m
+[32m+[m
+[32m+[m[32m  if (!userId) {[m
+[32m+[m[32m    return { error: "Debes iniciar sesión para registrar actividades." };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return { contrato, userId };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32masync function insertarActividadConAnalisis({[m
+[32m+[m[32m  fecha,[m
+[32m+[m[32m  actividadOriginal,[m
+[32m+[m[32m  analisis,[m
+[32m+[m[32m}: {[m
+[32m+[m[32m  fecha: string;[m
+[32m+[m[32m  actividadOriginal: string;[m
+[32m+[m[32m  analisis: AnalisisActi

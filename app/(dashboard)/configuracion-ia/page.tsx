@@ -21,7 +21,8 @@ export default async function ConfiguracionIAPage() {
       <header>
         <h1 className="text-3xl font-semibold text-zinc-900">Configuración IA</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Personaliza el estilo de redacción que AIAC utilizará al analizar tus actividades.
+          Define reglas del contrato, contexto técnico, estilo y ejemplos que AIAC utiliza al
+          analizar actividades.
         </p>
       </header>
 

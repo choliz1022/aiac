@@ -30,6 +30,7 @@ export type ExportConfiguracionIAJson = {
   objeto_contractual: string;
   obligaciones: string;
   instrucciones_informe: string;
+  estilo_redaccion: string;
   ejemplos_redaccion: string;
   contexto_tecnico: string;
 };

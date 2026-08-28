@@ -16,7 +16,12 @@ export type InformeMensualEvidencia = {
 export type InformeMensualActividadFila = {
   id: string;
   fecha: string;
+  /** Etiqueta de fecha para presentación (individual o consolidada). */
+  fecha_ejecucion_etiqueta: string;
   redaccion_ia: string;
+  /** Redacciones sin modificar cuando se agrupan actividades equivalentes. */
+  redacciones_ia?: string[];
+  actividades_origen_ids?: string[];
   evidencias: InformeMensualEvidencia[];
 };
 

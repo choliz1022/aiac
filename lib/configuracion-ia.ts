@@ -46,3 +46,24 @@ export function toConfiguracionIAContext(
     ejemplos_redaccion,
   };
 }
+
+export function combinarTextoReglasConfiguracion(
+  configuracion?: Pick<
+    ConfiguracionIAContext,
+    "instrucciones_informe" | "contexto_tecnico" | "estilo_redaccion" | "ejemplos_redaccion"
+  > | null
+): string {
+  if (!configuracion) {
+    return "";
+  }
+
+  return [
+    configuracion.instrucciones_informe,
+    configuracion.contexto_tecnico,
+    configuracion.estilo_redaccion,
+    configuracion.ejemplos_redaccion,
+  ]
+    .map((texto) => texto?.trim() ?? "")
+    .filter(Boolean)
+    .join("\n");
+}

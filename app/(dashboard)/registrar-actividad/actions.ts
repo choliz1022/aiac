@@ -6,14 +6,24 @@ import {
   camposPersistenciaDesdeAnalisis,
   contratoEstaCompleto,
   ejecutarAnalisisActividad,
+  ejecutarAnalisisActividadParaPresentacion,
   obtenerContratoActivo,
+  regenerarRedaccionActividadParaPresentacion,
 } from "@/lib/pipeline-analisis-actividad";
+import { validarAnalisisActividadEntrada } from "@/lib/validar-analisis-actividad";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  AnalizarActividadPreviewInput,
+  AnalizarActividadPreviewResult,
   AnalizarYGuardarActividadInput,
   AnalizarYGuardarActividadResult,
+  AnalisisActividadResult,
+  GuardarActividadConfirmadaInput,
+  GuardarActividadConfirmadaResult,
   GuardarReferenciasEvidenciasInput,
   GuardarReferenciasEvidenciasResult,
+  ReanalizarRedaccionActividadInput,
+  ReanalizarRedaccionActividadResult,
 } from "@/types/analisis-actividad";
 
 async function getAuthenticatedUserId(): Promise<string | null> {
@@ -49,6 +59,170 @@ async function actividadPerteneceAlUsuario(
   return true;
 }
 
+async function obtenerContratoYUsuario(): Promise<
+  | {
+      contrato: NonNullable<Awaited<ReturnType<typeof obtenerContratoActivo>>>;
+      userId: string;
+    }
+  | { error: string }
+> {
+  const supabase = await createClient();
+  const contrato = await obtenerContratoActivo(supabase);
+
+  if (!contrato || !contratoEstaCompleto(contrato)) {
+    return { error: "No hay un contrato activo completo configurado." };
+  }
+
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return { error: "Debes iniciar sesión para registrar actividades." };
+  }
+
+  return { contrato, userId };
+}
+
+async function insertarActividadConAnalisis({
+  fecha,
+  actividadOriginal,
+  analisis,
+}: {
+  fecha: string;
+  actividadOriginal: string;
+  analisis: AnalisisActividadResult;
+}): Promise<{ actividad_id: string } | { error: string }> {
+  const contexto = await obtenerContratoYUsuario();
+
+  if ("error" in contexto) {
+    return { error: contexto.error };
+  }
+
+  const supabase = await createClient();
+
+  const { data: actividadInsertada, error } = await supabase
+    .from("actividades")
+    .insert({
+      contrato_id: contexto.contrato.id,
+      fecha,
+      actividad_original: actividadOriginal,
+      ...camposPersistenciaDesdeAnalisis(analisis),
+    })
+    .select("id")
+    .single();
+
+  if (error || !actividadInsertada) {
+    return { error: error?.message ?? "No se pudo guardar la actividad." };
+  }
+
+  return { actividad_id: actividadInsertada.id };
+}
+
+export async function analizarActividadPreview(
+  input: AnalizarActividadPreviewInput
+): Promise<AnalizarActividadPreviewResult> {
+  try {
+    const actividadOriginal = input.actividad.trim();
+
+    if (!actividadOriginal) {
+      return { success: false, error: "La actividad es obligatoria." };
+    }
+
+    const contexto = await obtenerContratoYUsuario();
+
+    if ("error" in contexto) {
+      return { success: false, error: contexto.error };
+    }
+
+    const analisis = await ejecutarAnalisisActividadParaPresentacion(
+      contexto.contrato,
+      actividadOriginal
+    );
+
+    return { success: true, analisis };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "No se pudo analizar la actividad.";
+
+    return { success: false, error: message };
+  }
+}
+
+export async function reanalizarRedaccionActividad(
+  input: ReanalizarRedaccionActividadInput
+): Promise<ReanalizarRedaccionActividadResult> {
+  try {
+    const actividadOriginal = input.actividad.trim();
+
+    if (!actividadOriginal) {
+      return { success: false, error: "La actividad es obligatoria." };
+    }
+
+    const analisisBase = validarAnalisisActividadEntrada(input.analisis);
+
+    if (!analisisBase) {
+      return { success: false, error: "El análisis IA actual no es válido." };
+    }
+
+    const contexto = await obtenerContratoYUsuario();
+
+    if ("error" in contexto) {
+      return { success: false, error: contexto.error };
+    }
+
+    const analisis = await regenerarRedaccionActividadParaPresentacion(
+      contexto.contrato,
+      actividadOriginal,
+      analisisBase
+    );
+
+    return { success: true, analisis };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "No se pudo regenerar la redacción.";
+
+    return { success: false, error: message };
+  }
+}
+
+export async function guardarActividadConfirmada(
+  input: GuardarActividadConfirmadaInput
+): Promise<GuardarActividadConfirmadaResult> {
+  try {
+    const actividadOriginal = input.actividad.trim();
+
+    if (!input.fecha.trim()) {
+      return { success: false, error: "La fecha es obligatoria." };
+    }
+
+    if (!actividadOriginal) {
+      return { success: false, error: "La actividad es obligatoria." };
+    }
+
+    const analisis = validarAnalisisActividadEntrada(input.analisis);
+
+    if (!analisis) {
+      return { success: false, error: "El análisis IA recibido no es válido." };
+    }
+
+    const resultado = await insertarActividadConAnalisis({
+      fecha: input.fecha,
+      actividadOriginal,
+      analisis,
+    });
+
+    if ("error" in resultado) {
+      return { success: false, error: resultado.error };
+    }
+
+    return { success: true, actividad_id: resultado.actividad_id };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "No se pudo guardar la actividad.";
+
+    return { success: false, error: message };
+  }
+}
+
 export async function analizarYGuardarActividad(
   input: AnalizarYGuardarActividadInput
 ): Promise<AnalizarYGuardarActividadResult> {
@@ -63,42 +237,27 @@ export async function analizarYGuardarActividad(
       return { success: false, error: "La actividad es obligatoria." };
     }
 
-    const supabase = await createClient();
-    const contrato = await obtenerContratoActivo(supabase);
+    const contexto = await obtenerContratoYUsuario();
 
-    if (!contrato || !contratoEstaCompleto(contrato)) {
-      return {
-        success: false,
-        error: "No hay un contrato activo completo configurado.",
-      };
+    if ("error" in contexto) {
+      return { success: false, error: contexto.error };
     }
 
-    const userId = await getAuthenticatedUserId();
+    const analisis = await ejecutarAnalisisActividad(contexto.contrato, actividadOriginal);
 
-    if (!userId) {
-      return { success: false, error: "Debes iniciar sesión para registrar actividades." };
-    }
+    const resultado = await insertarActividadConAnalisis({
+      fecha: input.fecha,
+      actividadOriginal,
+      analisis,
+    });
 
-    const analisis = await ejecutarAnalisisActividad(contrato, actividadOriginal);
-
-    const { data: actividadInsertada, error } = await supabase
-      .from("actividades")
-      .insert({
-        contrato_id: contrato.id,
-        fecha: input.fecha,
-        actividad_original: actividadOriginal,
-        ...camposPersistenciaDesdeAnalisis(analisis),
-      })
-      .select("id")
-      .single();
-
-    if (error || !actividadInsertada) {
-      return { success: false, error: error?.message ?? "No se pudo guardar la actividad." };
+    if ("error" in resultado) {
+      return { success: false, error: resultado.error };
     }
 
     return {
       success: true,
-      actividad_id: actividadInsertada.id,
+      actividad_id: resultado.actividad_id,
       proyecto_detectado: analisis.proyecto_detectado,
       obligacion_detectada: analisis.obligacion_detectada,
       resumen_ia: analisis.resumen_ia,

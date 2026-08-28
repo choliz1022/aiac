@@ -1,5 +1,9 @@
 import { analizarActividad } from "@/lib/analizar-actividad";
+import { corregirOrtografiaCamposPresentacion } from "@/lib/correccion-ortografica-presentacion";
 import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
+import { combinarTextoReglasConfiguracion } from "@/lib/configuracion-ia";
+import { aplicarReglasNoExpandirRedaccion } from "@/lib/reglas-configuracion-ia-redaccion";
+import { regenerarRedaccionActividad } from "@/lib/regenerar-redaccion-actividad";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalisisActividadResult } from "@/types/analisis-actividad";
 
@@ -66,6 +70,44 @@ export async function ejecutarAnalisisActividad(
     obligaciones: contrato.obligaciones,
     actividadOriginal,
     configuracion,
+  });
+}
+
+/** Análisis IA + corrección ortográfica previa a mostrar la vista previa. */
+export async function ejecutarAnalisisActividadParaPresentacion(
+  contrato: ContratoActivo,
+  actividadOriginal: string
+): Promise<AnalisisActividadResult> {
+  const analisis = await ejecutarAnalisisActividad(contrato, actividadOriginal);
+  return corregirOrtografiaCamposPresentacion(analisis);
+}
+
+/** Regenera solo redacción y resumen; mantiene clasificación, obligación y proyecto. */
+export async function regenerarRedaccionActividadParaPresentacion(
+  contrato: ContratoActivo,
+  actividadOriginal: string,
+  analisisBase: AnalisisActividadResult
+): Promise<AnalisisActividadResult> {
+  const configuracion = toConfiguracionIAContext(await getConfiguracionIA().catch(() => null));
+  const regenerada = await regenerarRedaccionActividad(
+    contrato,
+    actividadOriginal,
+    analisisBase
+  );
+
+  const textoReglas = combinarTextoReglasConfiguracion(configuracion);
+
+  const redaccionAjustada = aplicarReglasNoExpandirRedaccion({
+    redaccion_ia: regenerada.redaccion_ia,
+    resumen_ia: regenerada.resumen_ia,
+    actividadOriginal,
+    textoReglas,
+  });
+
+  return corregirOrtografiaCamposPresentacion({
+    ...analisisBase,
+    redaccion_ia: redaccionAjustada.redaccion_ia,
+    resumen_ia: redaccionAjustada.resumen_ia,
   });
 }
 

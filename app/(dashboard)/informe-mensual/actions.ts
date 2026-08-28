@@ -8,7 +8,9 @@ import {
   construirObligacionesInformeContractual,
   parseObligacionesContrato,
 } from "@/lib/informe-mensual";
+import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
 import { createClient } from "@/lib/supabase/server";
+import type { ConfiguracionIAContext } from "@/types/configuracion-ia";
 import type { Actividad } from "@/types/actividad";
 import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia";
 import type {
@@ -93,7 +95,8 @@ async function adjuntarSignedUrlsPorActividad(
 
 async function construirInformePorObligaciones(
   contrato: ContratoInforme,
-  actividades: Actividad[]
+  actividades: Actividad[],
+  configuracion: ConfiguracionIAContext | null
 ): Promise<InformeMensualObligacion[]> {
   const obligacionesContrato = parseObligacionesContrato(contrato.obligaciones);
 
@@ -117,7 +120,8 @@ async function construirInformePorObligaciones(
   return construirObligacionesInformeContractual(
     obligacionesContrato,
     grupos,
-    evidenciasConUrl
+    evidenciasConUrl,
+    configuracion
   );
 }
 
@@ -146,7 +150,12 @@ export async function generarInformeMensual(
       return { success: true, sinActividades: true };
     }
 
-    const obligaciones = await construirInformePorObligaciones(contrato, actividades);
+    const configuracion = toConfiguracionIAContext(await getConfiguracionIA());
+    const obligaciones = await construirInformePorObligaciones(
+      contrato,
+      actividades,
+      configuracion
+    );
 
     const informe = construirInformeMensual({
       contrato,

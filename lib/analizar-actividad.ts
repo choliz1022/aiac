@@ -1,5 +1,7 @@
 import { getOpenAIClient, OPENAI_MODEL } from "@/lib/openai";
 import { validarObligacionDetectada } from "@/lib/clasificar-obligacion";
+import { combinarTextoReglasConfiguracion } from "@/lib/configuracion-ia";
+import { aplicarReglasNoExpandirRedaccion } from "@/lib/reglas-configuracion-ia-redaccion";
 import {
   ANALIZAR_ACTIVIDAD_SYSTEM_PROMPT,
   buildAnalizarActividadUserPrompt,
@@ -136,8 +138,18 @@ export async function analizarActividad(
     tipoActividadDetectadaIa: analisisIa.tipo_actividad_detectada,
   });
 
+  const textoReglas = combinarTextoReglasConfiguracion(input.configuracion);
+
+  const redaccionAjustada = aplicarReglasNoExpandirRedaccion({
+    redaccion_ia: analisisIa.redaccion_ia,
+    resumen_ia: analisisIa.resumen_ia,
+    actividadOriginal: input.actividadOriginal,
+    textoReglas,
+  });
+
   return {
     ...analisisIa,
+    ...redaccionAjustada,
     obligacion_detectada: clasificacion.obligacion_detectada,
     tipo_actividad_detectada: clasificacion.tipo_actividad_detectada,
     puntaje_clasificacion: clasificacion.puntaje,
