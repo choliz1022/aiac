@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import InformeMensualPreview from "@/components/informe-mensual-preview";
+import InformeSupervisionPreview from "@/components/informe-supervision-preview";
 import { generarInformeMensual } from "@/app/(dashboard)/informe-mensual/actions";
-import type { InformeMensualData } from "@/types/informe-mensual";
+import type { InformeMensualData, TipoInforme } from "@/types/informe-mensual";
 
 type InformeMensualFormProps = {
   anioActual: number;
@@ -27,6 +28,7 @@ const MESES = [
 export default function InformeMensualForm({ anioActual }: InformeMensualFormProps) {
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [anio, setAnio] = useState(anioActual);
+  const [tipoInforme, setTipoInforme] = useState<TipoInforme>("contratista");
   const [generando, setGenerando] = useState(false);
   const [descargandoDocx, setDescargandoDocx] = useState(false);
   const [informe, setInforme] = useState<InformeMensualData | null>(null);
@@ -46,6 +48,7 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
       const result = await generarInformeMensual({
         mes,
         anio,
+        tipoInforme,
       });
 
       if (!result.success) {
@@ -83,7 +86,7 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
       const response = await fetch("/api/informe-mensual/docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mes, anio }),
+        body: JSON.stringify({ mes, anio, tipoInforme }),
         cache: "no-store",
       });
 
@@ -112,7 +115,7 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
       URL.revokeObjectURL(url);
 
       setMensaje({
-        type: imagenesOmitidas > 0 ? "info" : "info",
+        type: "info",
         text:
           imagenesOmitidas > 0
             ? `DOCX descargado con ${imagenesEmbebidas} imagen(es) embebida(s). ${imagenesOmitidas} no pudieron incluirse.`
@@ -169,6 +172,34 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
             </div>
           </div>
 
+          <fieldset className="space-y-3">
+            <legend className="block text-sm font-medium text-zinc-700">Tipo de informe</legend>
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+                <input
+                  type="radio"
+                  name="tipoInforme"
+                  value="contratista"
+                  checked={tipoInforme === "contratista"}
+                  onChange={() => setTipoInforme("contratista")}
+                  className="h-4 w-4 border-zinc-300 text-zinc-900 focus:ring-zinc-300"
+                />
+                Contratista
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+                <input
+                  type="radio"
+                  name="tipoInforme"
+                  value="supervision"
+                  checked={tipoInforme === "supervision"}
+                  onChange={() => setTipoInforme("supervision")}
+                  className="h-4 w-4 border-zinc-300 text-zinc-900 focus:ring-zinc-300"
+                />
+                Supervisión
+              </label>
+            </div>
+          </fieldset>
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="submit"
@@ -194,7 +225,11 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
       {informe && (
         <section className="space-y-4">
           <div className="rounded-2xl border border-zinc-200 bg-zinc-100 p-4 sm:p-6">
-            <InformeMensualPreview informe={informe} />
+            {informe.tipoInforme === "supervision" ? (
+              <InformeSupervisionPreview informe={informe} />
+            ) : (
+              <InformeMensualPreview informe={informe} />
+            )}
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

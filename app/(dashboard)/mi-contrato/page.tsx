@@ -17,7 +17,7 @@ async function getContratoActivo(): Promise<Contrato | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("contratos")
-      .select("id, nombre, entidad, objeto_contractual, obligaciones")
+      .select("id, nombre, entidad, objeto_contractual, obligaciones, contratista_nombre, contrato_fecha_inicio, contrato_fecha_fin, supervisor_nombre, supervisor_cargo")
       .limit(1)
       .maybeSingle();
 

@@ -137,6 +137,13 @@ export function mapearActividadAFilaInforme(
   });
 }
 
+/** Una redacción representativa por fila consolidada (informe contratista y supervisión). */
+export function obtenerRedaccionesActividadInforme(
+  actividad: InformeMensualActividadFila
+): string[] {
+  return [actividad.redaccion_ia];
+}
+
 export function crearOpcionesAgrupacionTemporal(
   configuracion?: ConfiguracionIAContext | null
 ): OpcionesAgrupacionTemporal {

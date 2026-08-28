@@ -8,11 +8,12 @@ import {
   construirObligacionesInformeContractual,
   parseObligacionesContrato,
 } from "@/lib/informe-mensual";
-import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
+import { prepararInformeSupervision } from "@/lib/informe-supervision";
 import { createClient } from "@/lib/supabase/server";
 import type { ConfiguracionIAContext } from "@/types/configuracion-ia";
 import type { Actividad } from "@/types/actividad";
 import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia";
+import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
 import type {
   GenerarInformeResult,
   InformeMensualContrato,
@@ -28,7 +29,9 @@ async function getContratoActivo(): Promise<ContratoInforme | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("contratos")
-    .select("nombre, entidad, objeto_contractual, obligaciones")
+    .select(
+      "nombre, entidad, objeto_contractual, obligaciones, contratista_nombre, contrato_fecha_inicio, contrato_fecha_fin, supervisor_nombre, supervisor_cargo"
+    )
     .limit(1)
     .maybeSingle();
 
@@ -151,19 +154,34 @@ export async function generarInformeMensual(
     }
 
     const configuracion = toConfiguracionIAContext(await getConfiguracionIA());
+    const tipoInforme = input.tipoInforme ?? "contratista";
     const obligaciones = await construirInformePorObligaciones(
       contrato,
       actividades,
       configuracion
     );
 
-    const informe = construirInformeMensual({
-      contrato,
+    const informeContractual = construirInformeMensual({
+      contrato: {
+        nombre: contrato.nombre,
+        entidad: contrato.entidad,
+        objeto_contractual: contrato.objeto_contractual,
+        contratista_nombre: contrato.contratista_nombre,
+        contrato_fecha_inicio: contrato.contrato_fecha_inicio,
+        contrato_fecha_fin: contrato.contrato_fecha_fin,
+        supervisor_nombre: contrato.supervisor_nombre,
+        supervisor_cargo: contrato.supervisor_cargo,
+      },
       actividades,
       obligaciones,
       mes: input.mes,
       anio: input.anio,
     });
+
+    const informe =
+      tipoInforme === "supervision"
+        ? prepararInformeSupervision(informeContractual)
+        : informeContractual;
 
     return { success: true, informe };
   } catch (error) {

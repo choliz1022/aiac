@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Packer } from "docx";
+import { construirDocumentoInformeSupervision } from "@/lib/exportar-informe-supervision-docx";
 import {
   construirDocumentoInformeMensual,
   construirNombreArchivoInforme,
@@ -31,6 +32,21 @@ export type ResultadoGeneracionDocx = {
 export async function generarBufferInformeDocx(
   informe: InformeMensualData
 ): Promise<ResultadoGeneracionDocx> {
+  let filename = construirNombreArchivoInforme(informe);
+
+  if (informe.tipoInforme === "supervision") {
+    filename = filename.replace("_Informe_", "_InformeSupervision_");
+    const documento = construirDocumentoInformeSupervision(informe);
+    const buffer = await Packer.toBuffer(documento);
+
+    return {
+      buffer,
+      filename,
+      imagenesEmbebidas: 0,
+      imagenesOmitidas: 0,
+    };
+  }
+
   const supabase = await createClient();
   const imagenesPorId = await cargarImagenesEvidenciasParaDocx(supabase, informe);
   const documento = construirDocumentoInformeMensual(informe, imagenesPorId);
@@ -39,7 +55,7 @@ export async function generarBufferInformeDocx(
 
   return {
     buffer,
-    filename: construirNombreArchivoInforme(informe),
+    filename,
     imagenesEmbebidas: imagenesPorId.size,
     imagenesOmitidas: Math.max(0, totalEvidencias - imagenesPorId.size),
   };

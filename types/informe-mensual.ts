@@ -1,6 +1,9 @@
+export type TipoInforme = "contratista" | "supervision";
+
 export type InformeMensualInput = {
   mes: number;
   anio: number;
+  tipoInforme?: TipoInforme;
 };
 
 export type InformeMensualEvidencia = {
@@ -36,6 +39,11 @@ export type InformeMensualContrato = {
   nombre: string;
   entidad: string;
   objeto_contractual: string;
+  contratista_nombre?: string;
+  contrato_fecha_inicio?: string | null;
+  contrato_fecha_fin?: string | null;
+  supervisor_nombre?: string;
+  supervisor_cargo?: string;
 };
 
 export type InformeMensualPeriodo = {
@@ -51,6 +59,7 @@ export type InformeMensualResumen = {
 };
 
 export type InformeMensualData = {
+  tipoInforme?: TipoInforme;
   contrato: InformeMensualContrato;
   periodo: InformeMensualPeriodo;
   obligaciones: InformeMensualObligacion[];

@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 type DocxRequestBody = {
   mes?: number;
   anio?: number;
+  tipoInforme?: "contratista" | "supervision";
 };
 
 export async function POST(request: Request) {
@@ -29,7 +30,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const resultadoInforme = await generarInformeMensual({ mes, anio });
+    const tipoInforme = body.tipoInforme === "supervision" ? "supervision" : "contratista";
+
+    const resultadoInforme = await generarInformeMensual({ mes, anio, tipoInforme });
 
     if (!resultadoInforme.success) {
       return NextResponse.json({ error: resultadoInforme.error }, { status: 400 });

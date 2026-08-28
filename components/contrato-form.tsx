@@ -13,6 +13,11 @@ const emptyForm: ContratoFormData = {
   entidad: "",
   objeto_contractual: "",
   obligaciones: "",
+  contratista_nombre: "",
+  contrato_fecha_inicio: "",
+  contrato_fecha_fin: "",
+  supervisor_nombre: "",
+  supervisor_cargo: "",
 };
 
 function logSupabaseError(error: unknown) {
@@ -41,6 +46,11 @@ export default function ContratoForm({ contrato }: ContratoFormProps) {
           entidad: contrato.entidad,
           objeto_contractual: contrato.objeto_contractual,
           obligaciones: contrato.obligaciones,
+          contratista_nombre: contrato.contratista_nombre ?? "",
+          contrato_fecha_inicio: contrato.contrato_fecha_inicio ?? "",
+          contrato_fecha_fin: contrato.contrato_fecha_fin ?? "",
+          supervisor_nombre: contrato.supervisor_nombre ?? "",
+          supervisor_cargo: contrato.supervisor_cargo ?? "",
         }
       : emptyForm
   );
@@ -63,26 +73,32 @@ export default function ContratoForm({ contrato }: ContratoFormProps) {
     setSaving(true);
     setMessage(null);
 
+    const payload = {
+      ...form,
+      contrato_fecha_inicio: form.contrato_fecha_inicio?.trim() || null,
+      contrato_fecha_fin: form.contrato_fecha_fin?.trim() || null,
+    };
+
     try {
       const supabase = createClient();
 
       if (contratoId) {
-        console.log("Payload UPDATE:", form);
+        console.log("Payload UPDATE:", payload);
 
         const { error } = await supabase
           .from("contratos")
-          .update(form)
+          .update(payload)
           .eq("id", contratoId);
 
         if (error) throw error;
 
         setMessage({ type: "success", text: "Contrato actualizado correctamente." });
       } else {
-        console.log("Payload INSERT:", form);
+        console.log("Payload INSERT:", payload);
 
         const { data, error } = await supabase
           .from("contratos")
-          .insert(form)
+          .insert(payload)
           .select("id")
           .single();
 
@@ -171,6 +187,80 @@ export default function ContratoForm({ contrato }: ContratoFormProps) {
           Las obligaciones contractuales serán utilizadas por la IA para clasificar
           automáticamente las actividades registradas.
         </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label htmlFor="contratista_nombre" className="block text-sm font-medium text-zinc-700">
+            Contratista
+          </label>
+          <input
+            id="contratista_nombre"
+            name="contratista_nombre"
+            type="text"
+            value={form.contratista_nombre ?? ""}
+            onChange={(event) => handleChange("contratista_nombre", event.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="contrato_fecha_inicio" className="block text-sm font-medium text-zinc-700">
+            Inicio del contrato
+          </label>
+          <input
+            id="contrato_fecha_inicio"
+            name="contrato_fecha_inicio"
+            type="date"
+            value={form.contrato_fecha_inicio ?? ""}
+            onChange={(event) => handleChange("contrato_fecha_inicio", event.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="contrato_fecha_fin" className="block text-sm font-medium text-zinc-700">
+            Fin del contrato
+          </label>
+          <input
+            id="contrato_fecha_fin"
+            name="contrato_fecha_fin"
+            type="date"
+            value={form.contrato_fecha_fin ?? ""}
+            onChange={(event) => handleChange("contrato_fecha_fin", event.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label htmlFor="supervisor_nombre" className="block text-sm font-medium text-zinc-700">
+            Supervisor
+          </label>
+          <input
+            id="supervisor_nombre"
+            name="supervisor_nombre"
+            type="text"
+            value={form.supervisor_nombre}
+            onChange={(event) => handleChange("supervisor_nombre", event.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="supervisor_cargo" className="block text-sm font-medium text-zinc-700">
+            Cargo del supervisor
+          </label>
+          <input
+            id="supervisor_cargo"
+            name="supervisor_cargo"
+            type="text"
+            value={form.supervisor_cargo}
+            onChange={(event) => handleChange("supervisor_cargo", event.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
