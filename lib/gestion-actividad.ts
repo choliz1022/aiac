@@ -1,15 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  actividadPerteneceAlContratoActivo,
+  obtenerActividadDelUsuario,
+} from "@/lib/actividad-acceso";
+import {
   EVIDENCIAS_BUCKET,
   EVIDENCIAS_MAX_ARCHIVOS,
   esRutaEvidenciaValida,
   sanitizarNombreArchivo,
 } from "@/lib/evidencias";
+import { getContratoActivoId, getContratoAnalisisPorId } from "@/lib/contrato-activo";
 import {
   camposPersistenciaDesdeAnalisis,
   contratoEstaCompleto,
   ejecutarAnalisisActividad,
-  obtenerContratoActivo,
   type ActividadCamposReanalizados,
 } from "@/lib/pipeline-analisis-actividad";
 import type { EvidenciaReferenciaInput } from "@/types/analisis-actividad";
@@ -19,19 +23,37 @@ export type GestionActividadError = {
   error: string;
 };
 
-export async function actividadPerteneceAlUsuario(
+export { actividadPerteneceAlContratoActivo, obtenerActividadDelUsuario };
+
+async function validarAccesoActividadContratoActivo(
   supabase: SupabaseClient,
   actividadId: string,
   userId: string
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("actividades")
-    .select("id")
-    .eq("id", actividadId)
-    .eq("user_id", userId)
-    .maybeSingle();
+): Promise<{ contratoId: string } | GestionActividadError> {
+  const contratoActivoId = await getContratoActivoId();
 
-  return !error && Boolean(data);
+  if (!contratoActivoId) {
+    return {
+      success: false,
+      error: "No hay un contrato activo configurado.",
+    };
+  }
+
+  const pertenece = await actividadPerteneceAlContratoActivo(
+    supabase,
+    actividadId,
+    userId,
+    contratoActivoId
+  );
+
+  if (!pertenece) {
+    return {
+      success: false,
+      error: "No tienes permiso para modificar esta actividad en el contrato activo.",
+    };
+  }
+
+  return { contratoId: contratoActivoId };
 }
 
 async function contarEvidenciasActividad(
@@ -72,13 +94,17 @@ export async function actualizarActividadConReanalisis(
     return { success: false, error: "La descripción es obligatoria." };
   }
 
-  const pertenece = await actividadPerteneceAlUsuario(supabase, actividadIdLimpio, userId);
+  const acceso = await validarAccesoActividadContratoActivo(
+    supabase,
+    actividadIdLimpio,
+    userId
+  );
 
-  if (!pertenece) {
-    return { success: false, error: "No tienes permiso para editar esta actividad." };
+  if ("success" in acceso) {
+    return acceso;
   }
 
-  const contrato = await obtenerContratoActivo(supabase);
+  const contrato = await getContratoAnalisisPorId(acceso.contratoId);
 
   if (!contrato || !contratoEstaCompleto(contrato)) {
     return {
@@ -107,6 +133,7 @@ export async function actualizarActividadConReanalisis(
     })
     .eq("id", actividadIdLimpio)
     .eq("user_id", userId)
+    .eq("contrato_id", acceso.contratoId)
     .select(
       "id, fecha, actividad_original, tipo_actividad_detectada, proyecto_detectado, obligacion_detectada, clasificacion_manual, puntaje_clasificacion, redaccion_ia, resumen_ia, palabras_clave"
     )
@@ -135,10 +162,14 @@ export async function guardarReferenciasEvidenciasActividad(
     return { success: true, evidencias_count: 0 };
   }
 
-  const pertenece = await actividadPerteneceAlUsuario(supabase, actividadIdLimpio, userId);
+  const acceso = await validarAccesoActividadContratoActivo(
+    supabase,
+    actividadIdLimpio,
+    userId
+  );
 
-  if (!pertenece) {
-    return { success: false, error: "La actividad no pertenece a tu cuenta." };
+  if ("success" in acceso) {
+    return acceso;
   }
 
   const actuales = await contarEvidenciasActividad(supabase, actividadIdLimpio);
@@ -191,10 +222,14 @@ export async function eliminarEvidenciaDeActividad(
     return { success: false, error: "Evidencia no válida." };
   }
 
-  const pertenece = await actividadPerteneceAlUsuario(supabase, actividadIdLimpio, userId);
+  const acceso = await validarAccesoActividadContratoActivo(
+    supabase,
+    actividadIdLimpio,
+    userId
+  );
 
-  if (!pertenece) {
-    return { success: false, error: "No tienes permiso para modificar esta actividad." };
+  if ("success" in acceso) {
+    return acceso;
   }
 
   const { data: evidencia, error: selectError } = await supabase

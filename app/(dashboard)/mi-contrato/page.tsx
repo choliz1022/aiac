@@ -1,53 +1,59 @@
-import ContratoForm from "@/components/contrato-form";
-import { createClient } from "@/lib/supabase/server";
-import type { Contrato } from "@/types/contrato";
-
-async function getContratoActivo(): Promise<Contrato | null> {
-  try {
-    console.log(
-      "URL:",
-      process.env.NEXT_PUBLIC_SUPABASE_URL
-    );
-
-    console.log(
-      "KEY:",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 25)
-    );
-
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("contratos")
-      .select("id, nombre, entidad, objeto_contractual, obligaciones, contratista_nombre, contrato_fecha_inicio, contrato_fecha_fin, supervisor_nombre, supervisor_cargo")
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error Supabase:", error);
-      return null;
-    }
-
-    console.log("Contrato encontrado:", data);
-
-    return data;
-  } catch (error) {
-    console.error("Error al consultar contrato:", error);
-    return null;
-  }
-}
+import MiContratosGestion from "@/components/mi-contratos-gestion";
+import {
+  getContratoActivo,
+  getContratoActivoId,
+  listarContratosUsuario,
+  obtenerEstadoLimiteContratos,
+} from "@/lib/contrato-activo";
+import { usuarioTieneFeature } from "@/lib/planes";
 
 export default async function MiContratoPage() {
-  const contrato = await getContratoActivo();
+  const [
+    contratoActivoId,
+    contratoActivo,
+    contratosActivos,
+    contratosTodos,
+    limiteContratos,
+    puedeMultiContrato,
+  ] = await Promise.all([
+    getContratoActivoId(),
+    getContratoActivo(),
+    listarContratosUsuario(),
+    listarContratosUsuario({ incluirArchivados: true }),
+    obtenerEstadoLimiteContratos(),
+    usuarioTieneFeature("multi_contrato"),
+  ]);
+
+  const esVistaSimple = contratosActivos.length <= 1;
+  const tieneArchivados = contratosTodos.some((contrato) => contrato.estado === "archivado");
 
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold text-zinc-900">Mi Contrato</h1>
+        <h1 className="text-3xl font-semibold text-zinc-900">
+          {esVistaSimple ? "Mi Contrato" : "Mis Contratos"}
+        </h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Administra la información del contrato activo utilizado por AIAC.
+          {esVistaSimple
+            ? "Administra la información del contrato activo utilizado por AIAC."
+            : "Administra tus contratos, cambia el activo y configura obligaciones por contrato."}
         </p>
+        {!esVistaSimple && contratosActivos.length > 0 ? (
+          <p className="mt-1 text-xs text-zinc-500">
+            {contratosActivos.length} contratos activos
+          </p>
+        ) : null}
       </header>
 
-      <ContratoForm contrato={contrato} />
+      <MiContratosGestion
+        contratos={contratosTodos}
+        contratoActivoId={contratoActivoId}
+        contratoActivo={contratoActivo}
+        limiteContratos={limiteContratos}
+        puedeMultiContrato={puedeMultiContrato}
+        esVistaSimple={esVistaSimple}
+        tieneArchivados={tieneArchivados}
+      />
     </div>
   );
 }

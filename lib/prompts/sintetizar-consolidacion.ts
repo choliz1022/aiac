@@ -18,15 +18,15 @@ Tu tarea es SINTETIZAR actividades contractuales en UNA sola redacción de infor
 Modo: síntesis contractual.
 
 MODELO DE CLASIFICACIÓN:
-- Ecosistema (SIRCI, SIGMP, Bus-Estación): contexto organizacional, NO marco de redacción.
-- Frente de trabajo (FET, BCA-PAT, Audio Zonal, Puertas automáticas, etc.): unidad real de trabajo.
+- Categoría amplia o ecosistema: contexto organizacional, NO marco de redacción.
+- Frente de trabajo (módulo, entregable, proceso, componente): unidad real de trabajo.
 
 La consolidación NO debe:
 - copiar textos
 - concatenar textos
 - pegar actividades una tras otra
-- generalizar actividades bajo SIRCI, SIGMP o ITS
-- usar el ecosistema como sustituto del frente, documento o entregable
+- generalizar actividades bajo siglas o ecosistemas no presentes en origen
+- usar una categoría amplia como sustituto del frente, documento o entregable
 
 La consolidación debe:
 - identificar acciones comunes
@@ -40,50 +40,47 @@ Al leer la viñeta debe quedar evidente:
 - cuál fue el proceso trabajado
 
 Formato obligatorio:
-- primera persona
-- pasado
-- preferir inicio: "Apoyé la Dirección de TIC, con..."
+- primera persona del singular
+- tiempo pasado
+- oración contractual completa con acción + objeto/contexto explícitos del origen
 - una sola oración o dos como máximo
-- tono institucional y contractual
+- tono institucional y profesional, neutro salvo que las actividades origen indiquen otra formulación
 
 Reglas de fidelidad:
 - usar únicamente información presente en las actividades origen
 - no inventar hechos, resultados, entregables ni contexto
 - no agregar interpretaciones, beneficios, impactos ni conclusiones
+- no inventar entidades, dependencias o programas no mencionados en origen
 
 Prohibido en redaccion_consolidada, salvo que aparezca explícitamente en las actividades origen:
-- en el marco del SIGMP
-- asociado al SIGMP
-- relacionado con SIGMP
-- relacionado con SIRCI
-- relacionado con ITS
-- usar SIRCI, SIGMP o ITS como contexto universal
+- encuadres genéricos de ecosistema o plataforma no presentes en origen
+- usar siglas o categorías amplias como contexto universal
 - asegurando, contribuyendo, alineación estratégica, cumplimiento de objetivos
 
-Ejemplos de síntesis correcta:
+Ejemplos de síntesis correcta (estructura neutra):
 
 Entradas:
-- Elaboración estudio de mercado BCA-PAT
-- Continuación estudio de mercado BCA-PAT
+- Elaboración estudio de mercado componente alpha
+- Continuación estudio de mercado componente alpha
 
 Salida:
-Apoyé la Dirección de TIC, con la elaboración y continuidad del estudio de mercado para las BCA-PAT de ETIB.
+Realicé la elaboración y continuidad del estudio de mercado del componente ALPHA.
 
 Entradas:
-- Revisión FET
-- Ajuste FET
-- Proyección económica FET
+- Revisión proyección presupuestal
+- Ajuste proyección presupuestal
+- Actualización proyección presupuestal
 
 Salida:
-Apoyé la Dirección de TIC, con la revisión y ajuste de la proyección de recursos económicos del Fondo de Estabilización Tarifaria (FET) para las vigencias 2027 y 2028.
+Realicé la revisión y ajuste de la proyección presupuestal para las vigencias indicadas en las actividades origen.
 
 Entradas:
-- Pruebas audio zonal
-- Mesa técnica audio zonal
-- Coordinación pruebas audio zonal
+- Pruebas módulo reportes
+- Mesa técnica módulo reportes
+- Coordinación pruebas módulo reportes
 
 Salida:
-Apoyé la Dirección de TIC, con la coordinación y articulación técnica para la ejecución de pruebas asociadas al proyecto de audio zonal.
+Realicé la coordinación y articulación técnica para la ejecución de pruebas del módulo de reportes.
 
 Devuelve únicamente JSON válido con esta estructura exacta:
 {
@@ -125,9 +122,9 @@ Instrucciones:
 1. Sintetiza las actividades en UNA sola redacción contractual.
 2. NO copies ni concatenes los textos originales.
 3. Nombra el frente de trabajo, documento, entregable o proceso específico trabajado.
-4. NO uses SIRCI, SIGMP ni ITS salvo que aparezcan explícitamente en las actividades origen.
-5. NO uses expresiones como "en el marco del SIGMP" o "relacionado con SIRCI" si no están en origen.
-6. NO sustituyas el frente de trabajo por el ecosistema.
+4. NO uses siglas o categorías amplias salvo que aparezcan explícitamente en las actividades origen.
+5. NO uses expresiones de encuadre genérico si no están en origen.
+6. NO sustituyas el frente de trabajo por una categoría amplia.
 7. Usa solo información presente en las actividades origen.
 8. Devuelve únicamente redaccion_consolidada.`;
 }

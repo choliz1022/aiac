@@ -4,12 +4,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cerrarSesion } from "@/app/login/actions";
-import { APP_NAV_ITEMS } from "@/lib/navigation";
+import ContratoSelector from "@/components/contrato-selector";
+import { ADMIN_NAV_ITEM, APP_NAV_ITEMS } from "@/lib/navigation";
 import type { ResumenSidebar } from "@/lib/resumen-sidebar";
+import type { ContratoListado } from "@/types/contrato-activo";
 
 type AppSidebarProps = {
   resumenSidebar: ResumenSidebar;
   userEmail: string;
+  contratos: ContratoListado[];
+  contratoActivoId: string | null;
+  mostrarAdministracion?: boolean;
 };
 
 function esRutaActiva(pathname: string, href: string): boolean {
@@ -107,11 +112,21 @@ function SidebarFooter({ resumenSidebar }: { resumenSidebar: ResumenSidebar }) {
   return <SidebarResumenOperativo resumenSidebar={resumenSidebar} />;
 }
 
-export default function AppSidebar({ resumenSidebar, userEmail }: AppSidebarProps) {
+export default function AppSidebar({
+  resumenSidebar,
+  userEmail,
+  contratos,
+  contratoActivoId,
+  mostrarAdministracion = false,
+}: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileAbierto, setMobileAbierto] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const navItems = mostrarAdministracion
+    ? [...APP_NAV_ITEMS, ADMIN_NAV_ITEM]
+    : APP_NAV_ITEMS;
 
   const cerrarMobile = () => setMobileAbierto(false);
 
@@ -135,7 +150,7 @@ export default function AppSidebar({ resumenSidebar, userEmail }: AppSidebarProp
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {APP_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const activo = esRutaActiva(pathname, item.href);
 
           return (
@@ -154,6 +169,8 @@ export default function AppSidebar({ resumenSidebar, userEmail }: AppSidebarProp
           );
         })}
       </nav>
+
+      <ContratoSelector contratos={contratos} contratoActivoId={contratoActivoId} />
 
       <SidebarUsuario
         userEmail={userEmail}

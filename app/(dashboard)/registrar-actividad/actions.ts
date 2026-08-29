@@ -1,6 +1,8 @@
 "use server";
 
 import { eliminarActividadCompleta } from "@/lib/eliminar-actividad";
+import { actividadPerteneceAlContratoActivo } from "@/lib/actividad-acceso";
+import { getContratoActivoId } from "@/lib/contrato-activo";
 import { guardarReferenciasEvidenciasActividad } from "@/lib/gestion-actividad";
 import {
   camposPersistenciaDesdeAnalisis,
@@ -40,23 +42,24 @@ async function getAuthenticatedUserId(): Promise<string | null> {
   return user.id;
 }
 
-async function actividadPerteneceAlUsuario(
+async function actividadPerteneceAlContratoActivoRegistro(
   actividadId: string,
   userId: string
 ): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("actividades")
-    .select("id")
-    .eq("id", actividadId)
-    .eq("user_id", userId)
-    .maybeSingle();
+  const contratoActivoId = await getContratoActivoId();
 
-  if (error || !data) {
+  if (!contratoActivoId) {
     return false;
   }
 
-  return true;
+  const supabase = await createClient();
+
+  return actividadPerteneceAlContratoActivo(
+    supabase,
+    actividadId,
+    userId,
+    contratoActivoId
+  );
 }
 
 async function obtenerContratoYUsuario(): Promise<
@@ -66,8 +69,7 @@ async function obtenerContratoYUsuario(): Promise<
     }
   | { error: string }
 > {
-  const supabase = await createClient();
-  const contrato = await obtenerContratoActivo(supabase);
+  const contrato = await obtenerContratoActivo();
 
   if (!contrato || !contratoEstaCompleto(contrato)) {
     return { error: "No hay un contrato activo completo configurado." };
@@ -290,10 +292,13 @@ export async function guardarReferenciasEvidencias(
       return { success: false, error: "Debes iniciar sesión para registrar evidencias." };
     }
 
-    const pertenece = await actividadPerteneceAlUsuario(actividadId, userId);
+    const pertenece = await actividadPerteneceAlContratoActivoRegistro(actividadId, userId);
 
     if (!pertenece) {
-      return { success: false, error: "La actividad no pertenece a tu cuenta." };
+      return {
+        success: false,
+        error: "La actividad no pertenece al contrato activo.",
+      };
     }
 
     const supabase = await createClient();

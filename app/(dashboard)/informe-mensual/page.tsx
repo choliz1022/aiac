@@ -1,7 +1,9 @@
 import InformeMensualForm from "@/components/informe-mensual-form";
+import { usuarioTieneFeature } from "@/lib/planes";
 
-export default function InformeMensualPage() {
+export default async function InformeMensualPage() {
   const anioActual = new Date().getFullYear();
+  const puedeInformeSupervision = await usuarioTieneFeature("informe_supervision");
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -13,7 +15,10 @@ export default function InformeMensualPage() {
         </p>
       </header>
 
-      <InformeMensualForm anioActual={anioActual} />
+      <InformeMensualForm
+        anioActual={anioActual}
+        puedeInformeSupervision={puedeInformeSupervision}
+      />
     </div>
   );
 }

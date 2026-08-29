@@ -1,6 +1,7 @@
 export type ConfiguracionIA = {
   id: string;
   user_id?: string;
+  contrato_id?: string | null;
   estilo_redaccion: string;
   ejemplos_redaccion: string;
   instrucciones_informe: string;

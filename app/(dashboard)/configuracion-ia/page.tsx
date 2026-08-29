@@ -1,10 +1,12 @@
 import ConfiguracionIAForm from "@/components/configuracion-ia-form";
 import RespaldoAiacPanel from "@/components/respaldo-aiac-panel";
+import { getContratoActivoId } from "@/lib/contrato-activo";
 import { getConfiguracionIA } from "@/lib/configuracion-ia";
 
 export default async function ConfiguracionIAPage() {
   let configuracion = null;
   let error: string | null = null;
+  const contratoActivoId = await getContratoActivoId();
 
   try {
     configuracion = await getConfiguracionIA();
@@ -30,7 +32,10 @@ export default async function ConfiguracionIAPage() {
         {error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : (
-          <ConfiguracionIAForm configuracion={configuracion} />
+          <ConfiguracionIAForm
+            configuracion={configuracion}
+            contratoActivoId={contratoActivoId}
+          />
         )}
       </section>
 

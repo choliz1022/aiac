@@ -1,10 +1,12 @@
 "use server";
 
+import { getContratoActivo, getContratoActivoId } from "@/lib/contrato-activo";
 import {
   construirRespaldoAiac,
   parsearRespaldoImportable,
   respaldoImportableAFilas,
 } from "@/lib/respaldo-aiac";
+import { getConfiguracionIA } from "@/lib/configuracion-ia";
 import { createClient } from "@/lib/supabase/server";
 import type { ConfiguracionIA } from "@/types/configuracion-ia";
 import type { Contrato } from "@/types/contrato";
@@ -13,38 +15,6 @@ import type {
   RestaurarRespaldoResult,
 } from "@/types/respaldo-aiac";
 
-async function getContratoActivo(): Promise<Contrato | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("id, nombre, entidad, objeto_contractual, obligaciones")
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-}
-
-async function getConfiguracionActiva(): Promise<ConfiguracionIA | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("configuracion_ia")
-    .select(
-      "id, estilo_redaccion, ejemplos_redaccion, instrucciones_informe, contexto_tecnico, created_at, updated_at"
-    )
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-}
-
 export async function obtenerDatosRespaldoAiac(): Promise<
   | { success: true; datos: RespaldoAiacDatos }
   | { success: false; error: string }
@@ -52,7 +22,7 @@ export async function obtenerDatosRespaldoAiac(): Promise<
   try {
     const [contrato, configuracion] = await Promise.all([
       getContratoActivo(),
-      getConfiguracionActiva(),
+      getConfiguracionIA(),
     ]);
 
     return {
@@ -95,20 +65,12 @@ async function persistirContrato(
     return;
   }
 
-  const { error } = await supabase.from("contratos").insert({
-    nombre: contrato.nombre,
-    entidad: contrato.entidad,
-    objeto_contractual: contrato.objeto_contractual,
-    obligaciones: contrato.obligaciones,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  throw new Error("No hay un contrato activo al que aplicar el respaldo.");
 }
 
 async function persistirConfiguracion(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  contratoId: string,
   configuracionActual: ConfiguracionIA | null,
   configuracion: {
     instrucciones_informe: string;
@@ -126,7 +88,8 @@ async function persistirConfiguracion(
         ejemplos_redaccion: configuracion.ejemplos_redaccion,
         contexto_tecnico: configuracion.contexto_tecnico,
       })
-      .eq("id", configuracionActual.id);
+      .eq("id", configuracionActual.id)
+      .eq("contrato_id", contratoId);
 
     if (error) {
       throw new Error(error.message);
@@ -136,6 +99,7 @@ async function persistirConfiguracion(
   }
 
   const { error } = await supabase.from("configuracion_ia").insert({
+    contrato_id: contratoId,
     instrucciones_informe: configuracion.instrucciones_informe,
     estilo_redaccion: configuracion.estilo_redaccion,
     ejemplos_redaccion: configuracion.ejemplos_redaccion,
@@ -159,9 +123,18 @@ export async function restaurarRespaldoAiac(data: unknown): Promise<RestaurarRes
       };
     }
 
+    const contratoActivoId = await getContratoActivoId();
+
+    if (!contratoActivoId) {
+      return {
+        success: false,
+        error: "No hay un contrato activo configurado.",
+      };
+    }
+
     const [contratoActual, configuracionActual] = await Promise.all([
       getContratoActivo(),
-      getConfiguracionActiva(),
+      getConfiguracionIA(contratoActivoId),
     ]);
 
     const filas = respaldoImportableAFilas(
@@ -173,7 +146,12 @@ export async function restaurarRespaldoAiac(data: unknown): Promise<RestaurarRes
     const supabase = await createClient();
 
     await persistirContrato(supabase, contratoActual, filas.contrato);
-    await persistirConfiguracion(supabase, configuracionActual, filas.configuracion);
+    await persistirConfiguracion(
+      supabase,
+      contratoActivoId,
+      configuracionActual,
+      filas.configuracion
+    );
 
     return { success: true };
   } catch (error) {

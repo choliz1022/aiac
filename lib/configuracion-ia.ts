@@ -1,14 +1,24 @@
+import { getContratoActivoId } from "@/lib/contrato-activo";
 import { createClient } from "@/lib/supabase/server";
 import type { ConfiguracionIA, ConfiguracionIAContext } from "@/types/configuracion-ia";
 
-export async function getConfiguracionIA(): Promise<ConfiguracionIA | null> {
+const CONFIGURACION_IA_SELECT =
+  "id, contrato_id, estilo_redaccion, ejemplos_redaccion, instrucciones_informe, contexto_tecnico, created_at, updated_at";
+
+export async function getConfiguracionIA(
+  contratoId?: string | null
+): Promise<ConfiguracionIA | null> {
+  const resolvedContratoId = contratoId ?? (await getContratoActivoId());
+
+  if (!resolvedContratoId) {
+    return null;
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("configuracion_ia")
-    .select(
-      "id, estilo_redaccion, ejemplos_redaccion, instrucciones_informe, contexto_tecnico, created_at, updated_at"
-    )
-    .limit(1)
+    .select(CONFIGURACION_IA_SELECT)
+    .eq("contrato_id", resolvedContratoId)
     .maybeSingle();
 
   if (error) {

@@ -4,6 +4,7 @@ export type AppNavItem = {
 };
 
 export const AUDITORIA_OBLIGACIONES_HREF = "/auditoria-obligaciones";
+export const ADMINISTRACION_HREF = "/administracion";
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
   { href: "/", label: "Inicio" },
@@ -14,3 +15,8 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { href: "/configuracion-ia", label: "Configuración IA" },
   { href: AUDITORIA_OBLIGACIONES_HREF, label: "Auditoría de obligaciones" },
 ];
+
+export const ADMIN_NAV_ITEM: AppNavItem = {
+  href: ADMINISTRACION_HREF,
+  label: "Administración",
+};

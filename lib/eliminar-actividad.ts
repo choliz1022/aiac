@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { actividadPerteneceAlContratoActivo } from "@/lib/actividad-acceso";
+import { getContratoActivoId } from "@/lib/contrato-activo";
 import {
   EVIDENCIAS_BUCKET,
   esRutaEvidenciaValida,
@@ -8,21 +10,6 @@ import {
 export type EliminarActividadCompletaResult =
   | { success: true; archivosEliminados: number }
   | { success: false; error: string };
-
-async function actividadPerteneceAlUsuario(
-  supabase: SupabaseClient,
-  actividadId: string,
-  userId: string
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("actividades")
-    .select("id")
-    .eq("id", actividadId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  return !error && Boolean(data);
-}
 
 async function recolectarRutasEvidenciasActividad(
   supabase: SupabaseClient,
@@ -90,16 +77,31 @@ export async function eliminarActividadCompleta(
     return { success: false, error: "Actividad no válida." };
   }
 
-  const pertenece = await actividadPerteneceAlUsuario(supabase, actividadIdLimpio, userId);
+  const contratoActivoId = await getContratoActivoId();
+
+  if (!contratoActivoId) {
+    return { success: false, error: "No hay un contrato activo configurado." };
+  }
+
+  const pertenece = await actividadPerteneceAlContratoActivo(
+    supabase,
+    actividadIdLimpio,
+    userId,
+    contratoActivoId
+  );
 
   console.log("[eliminar-actividad] Inicio", {
     actividadId: actividadIdLimpio,
     userId,
+    contratoActivoId,
     pertenece,
   });
 
   if (!pertenece) {
-    return { success: false, error: "No tienes permiso para eliminar esta actividad." };
+    return {
+      success: false,
+      error: "No tienes permiso para eliminar esta actividad en el contrato activo.",
+    };
   }
 
   try {
@@ -121,6 +123,7 @@ export async function eliminarActividadCompleta(
       .delete()
       .eq("id", actividadIdLimpio)
       .eq("user_id", userId)
+      .eq("contrato_id", contratoActivoId)
       .select("id");
 
     if (deleteError) {

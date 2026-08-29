@@ -8,6 +8,7 @@ import type { InformeMensualData, TipoInforme } from "@/types/informe-mensual";
 
 type InformeMensualFormProps = {
   anioActual: number;
+  puedeInformeSupervision: boolean;
 };
 
 const MESES = [
@@ -25,7 +26,10 @@ const MESES = [
   { value: 12, label: "Diciembre" },
 ];
 
-export default function InformeMensualForm({ anioActual }: InformeMensualFormProps) {
+export default function InformeMensualForm({
+  anioActual,
+  puedeInformeSupervision,
+}: InformeMensualFormProps) {
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [anio, setAnio] = useState(anioActual);
   const [tipoInforme, setTipoInforme] = useState<TipoInforme>("contratista");
@@ -186,18 +190,31 @@ export default function InformeMensualForm({ anioActual }: InformeMensualFormPro
                 />
                 Contratista
               </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+              <label
+                className={`inline-flex items-center gap-2 text-sm ${
+                  puedeInformeSupervision
+                    ? "cursor-pointer text-zinc-800"
+                    : "cursor-not-allowed text-zinc-400"
+                }`}
+              >
                 <input
                   type="radio"
                   name="tipoInforme"
                   value="supervision"
                   checked={tipoInforme === "supervision"}
+                  disabled={!puedeInformeSupervision}
                   onChange={() => setTipoInforme("supervision")}
-                  className="h-4 w-4 border-zinc-300 text-zinc-900 focus:ring-zinc-300"
+                  className="h-4 w-4 border-zinc-300 text-zinc-900 focus:ring-zinc-300 disabled:opacity-60"
                 />
                 Supervisión
               </label>
             </div>
+            {!puedeInformeSupervision ? (
+              <p className="text-sm text-zinc-500">
+                El informe de supervisión está disponible en el plan Profesional. Tu plan actual
+                incluye informe contratista.
+              </p>
+            ) : null}
           </fieldset>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

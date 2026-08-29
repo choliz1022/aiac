@@ -9,6 +9,8 @@ import {
   parseObligacionesContrato,
 } from "@/lib/informe-mensual";
 import { prepararInformeSupervision } from "@/lib/informe-supervision";
+import { getContratoActivo } from "@/lib/contrato-activo";
+import { assertFeature } from "@/lib/planes";
 import { createClient } from "@/lib/supabase/server";
 import type { ConfiguracionIAContext } from "@/types/configuracion-ia";
 import type { Actividad } from "@/types/actividad";
@@ -16,33 +18,12 @@ import type { ActividadEvidenciaConSignedUrl } from "@/types/actividad-evidencia
 import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
 import type {
   GenerarInformeResult,
-  InformeMensualContrato,
   InformeMensualInput,
   InformeMensualObligacion,
 } from "@/types/informe-mensual";
 
-type ContratoInforme = InformeMensualContrato & {
-  obligaciones: string;
-};
-
-async function getContratoActivo(): Promise<ContratoInforme | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contratos")
-    .select(
-      "nombre, entidad, objeto_contractual, obligaciones, contratista_nombre, contrato_fecha_inicio, contrato_fecha_fin, supervisor_nombre, supervisor_cargo"
-    )
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-}
-
 async function getActividadesDelPeriodo(
+  contratoId: string,
   mes: number,
   anio: number
 ): Promise<Actividad[]> {
@@ -54,6 +35,7 @@ async function getActividadesDelPeriodo(
     .select(
       "id, contrato_id, fecha, actividad_original, tipo_actividad_detectada, proyecto_detectado, obligacion_detectada, clasificacion_manual, puntaje_clasificacion, redaccion_ia, resumen_ia, palabras_clave, created_at"
     )
+    .eq("contrato_id", contratoId)
     .gte("fecha", inicio)
     .lte("fecha", fin)
     .order("fecha", { ascending: true });
@@ -97,7 +79,7 @@ async function adjuntarSignedUrlsPorActividad(
 }
 
 async function construirInformePorObligaciones(
-  contrato: ContratoInforme,
+  contrato: NonNullable<Awaited<ReturnType<typeof getContratoActivo>>>,
   actividades: Actividad[],
   configuracion: ConfiguracionIAContext | null
 ): Promise<InformeMensualObligacion[]> {
@@ -147,7 +129,7 @@ export async function generarInformeMensual(
       };
     }
 
-    const actividades = await getActividadesDelPeriodo(input.mes, input.anio);
+    const actividades = await getActividadesDelPeriodo(contrato.id, input.mes, input.anio);
 
     if (actividades.length === 0) {
       return { success: true, sinActividades: true };
@@ -155,6 +137,21 @@ export async function generarInformeMensual(
 
     const configuracion = toConfiguracionIAContext(await getConfiguracionIA());
     const tipoInforme = input.tipoInforme ?? "contratista";
+
+    if (tipoInforme === "supervision") {
+      const gateSupervision = await assertFeature("informe_supervision");
+
+      if (!gateSupervision.ok) {
+        return { success: false, error: gateSupervision.error };
+      }
+    } else {
+      const gateContratista = await assertFeature("informe_contratista");
+
+      if (!gateContratista.ok) {
+        return { success: false, error: gateContratista.error };
+      }
+    }
+
     const obligaciones = await construirInformePorObligaciones(
       contrato,
       actividades,

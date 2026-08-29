@@ -4,6 +4,7 @@ import {
   calcularPuntajeClasificacionAlmacenada,
   parseObligacionesContrato,
 } from "@/lib/clasificar-obligacion";
+import { getContratoActivo } from "@/lib/contrato-activo";
 import { normalizarConteoEvidenciasRelacion } from "@/lib/evidencias";
 import { createClient } from "@/lib/supabase/server";
 import type { Actividad } from "@/types/actividad";
@@ -55,18 +56,13 @@ function normalizarActividad(
 }
 
 async function getContratoObligaciones(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("obligaciones")
-    .limit(1)
-    .maybeSingle();
+  const contrato = await getContratoActivo();
 
-  if (error || !data?.obligaciones?.trim()) {
+  if (!contrato?.obligaciones?.trim()) {
     return null;
   }
 
-  return data.obligaciones;
+  return contrato.obligaciones;
 }
 
 async function getActividades(): Promise<{
@@ -75,15 +71,21 @@ async function getActividades(): Promise<{
   error: string | null;
 }> {
   try {
+    const contrato = await getContratoActivo();
     const obligacionesTexto = await getContratoObligaciones();
     const obligacionesContrato = obligacionesTexto
       ? parseObligacionesContrato(obligacionesTexto)
       : [];
 
+    if (!contrato) {
+      return { actividades: [], obligacionesContrato, error: null };
+    }
+
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("actividades")
       .select(CAMPOS_ACTIVIDAD)
+      .eq("contrato_id", contrato.id)
       .order("fecha", { ascending: false });
 
     if (error) {

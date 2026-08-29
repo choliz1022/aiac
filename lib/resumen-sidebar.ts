@@ -1,5 +1,5 @@
 import { esObligacionBasura } from "@/lib/clasificar-obligacion";
-import { getPeriodoActual } from "@/lib/contrato-activo";
+import { getContratoActivoId, getPeriodoActual } from "@/lib/contrato-activo";
 import { calcularRangoFechas } from "@/lib/informe-mensual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -57,17 +57,25 @@ export async function getResumenSidebar(): Promise<ResumenSidebar> {
   };
 
   try {
+    const contratoId = await getContratoActivoId();
+
+    if (!contratoId) {
+      return resumenVacío;
+    }
+
     const supabase = await createClient();
     const [{ data: actividadesPeriodo, error: errorPeriodo }, { data: ultimaActividad, error: errorUltima }] =
       await Promise.all([
         supabase
           .from("actividades")
           .select("obligacion_detectada")
+          .eq("contrato_id", contratoId)
           .gte("fecha", inicio)
           .lte("fecha", fin),
         supabase
           .from("actividades")
           .select("fecha, actividad_original")
+          .eq("contrato_id", contratoId)
           .order("fecha", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(1)

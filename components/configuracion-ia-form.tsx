@@ -6,6 +6,7 @@ import type { ConfiguracionIA, ConfiguracionIAFormData } from "@/types/configura
 
 type ConfiguracionIAFormProps = {
   configuracion: ConfiguracionIA | null;
+  contratoActivoId: string | null;
 };
 
 const emptyForm: ConfiguracionIAFormData = {
@@ -15,7 +16,10 @@ const emptyForm: ConfiguracionIAFormData = {
   ejemplos_redaccion: "",
 };
 
-export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFormProps) {
+export default function ConfiguracionIAForm({
+  configuracion,
+  contratoActivoId,
+}: ConfiguracionIAFormProps) {
   const [form, setForm] = useState<ConfiguracionIAFormData>(
     configuracion
       ? {
@@ -45,13 +49,18 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
     setMessage(null);
 
     try {
+      if (!contratoActivoId) {
+        throw new Error("No hay un contrato activo configurado.");
+      }
+
       const supabase = createClient();
 
       if (configuracionId) {
         const { error } = await supabase
           .from("configuracion_ia")
           .update(form)
-          .eq("id", configuracionId);
+          .eq("id", configuracionId)
+          .eq("contrato_id", contratoActivoId);
 
         if (error) throw error;
 
@@ -59,7 +68,7 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
       } else {
         const { data, error } = await supabase
           .from("configuracion_ia")
-          .insert(form)
+          .insert({ ...form, contrato_id: contratoActivoId })
           .select("id")
           .single();
 
@@ -92,7 +101,7 @@ export default function ConfiguracionIAForm({ configuracion }: ConfiguracionIAFo
           rows={8}
           value={form.instrucciones_informe}
           onChange={(event) => handleChange("instrucciones_informe", event.target.value)}
-          placeholder={`No asociar actividades del ecosistema SIRCI a la obligación 1.
+          placeholder={`No asociar actividades de un ecosistema a una obligación distinta sin criterio explícito.
 No expandir siglas en redacción salvo que aparezcan desarrolladas en la actividad original.
 Agrupar en informe por frente de trabajo y tipo de actividad.
 No inventar resultados, beneficios ni impactos.`}
@@ -114,15 +123,15 @@ No inventar resultados, beneficios ni impactos.`}
           rows={12}
           value={form.contexto_tecnico}
           onChange={(event) => handleChange("contexto_tecnico", event.target.value)}
-          placeholder={`Ecosistema: SIRCI
-Frentes: Masivo Capital (alias: MarcoPolo), ZMO, ETIB, FET, BCA-PAT
+          placeholder={`Ecosistema o área: Plataforma principal
+Frentes: Módulo de reportes, Sede norte, Componente ALPHA
 
-Ecosistema: SIGMP
-Frentes: Puertas automáticas, ITS de puertas
+Ecosistema o área: Infraestructura operativa
+Frentes: Control de acceso, Monitoreo en sitio
 
 Agrupación:
 - Mismo proyecto no implica consolidar en una sola fila
-- Masivo Capital y ZMO son frentes distintos`}
+- Frentes distintos deben mantenerse separados`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
         <p className="text-sm leading-6 text-zinc-500">
@@ -142,7 +151,7 @@ Agrupación:
           value={form.estilo_redaccion}
           onChange={(event) => handleChange("estilo_redaccion", event.target.value)}
           placeholder={`Redactar en primera persona del singular, tiempo pasado.
-Prefijo contractual: Apoyé a la Dirección de TIC, mediante...
+Prefijo contractual opcional: Realicé..., Apoyé..., Participé en...
 Conectores preferidos: mediante, con la, para la
 Lenguaje institucional y técnico.`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
@@ -162,11 +171,11 @@ Lenguaje institucional y técnico.`}
           rows={10}
           value={form.ejemplos_redaccion}
           onChange={(event) => handleChange("ejemplos_redaccion", event.target.value)}
-          placeholder={`Entrada: validación equipamiento sirci zmo
-Salida: Apoyé a la Dirección de TIC, mediante la validación de la instalación de equipamiento SIRCI en ZMO.
+          placeholder={`Entrada: validación equipamiento sede norte
+Salida: Realicé la validación de la instalación de equipamiento en la sede norte.
 
-Entrada: visita ETIB revisión BCA-PAT
-Salida: Apoyé a la Dirección de TIC, mediante la realización de visita técnica al concesionario ETIB para la revisión de BCA-PAT.`}
+Entrada: visita contratista revisar entregable alpha
+Salida: Realicé visita técnica al contratista para la revisión del entregable ALPHA.`}
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
         <p className="text-sm leading-6 text-zinc-500">

@@ -35,7 +35,9 @@ export async function regenerarRedaccionActividad(
   actividadOriginal: string,
   analisisBase: AnalisisActividadResult
 ): Promise<RedaccionRegenerada> {
-  const configuracion = toConfiguracionIAContext(await getConfiguracionIA().catch(() => null));
+  const configuracion = toConfiguracionIAContext(
+    await getConfiguracionIA(contrato.id).catch(() => null)
+  );
 
   const completion = await getOpenAIClient().chat.completions.create({
     model: OPENAI_MODEL,

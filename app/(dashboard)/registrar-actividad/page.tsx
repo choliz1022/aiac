@@ -1,47 +1,9 @@
 import RegistrarActividadForm from "@/components/registrar-actividad-form";
-import { createClient } from "@/lib/supabase/server";
+import { contratoEstaCompleto, getContratoActivoAnalisis } from "@/lib/contrato-activo";
 import { redirect } from "next/navigation";
 
-type ContratoActivo = {
-  id: string;
-  nombre: string;
-  entidad: string;
-  objeto_contractual: string;
-  obligaciones: string;
-};
-
-function contratoEstaCompleto(contrato: ContratoActivo): boolean {
-  return (
-    contrato.nombre.trim() !== "" &&
-    contrato.entidad.trim() !== "" &&
-    contrato.objeto_contractual.trim() !== "" &&
-    contrato.obligaciones.trim() !== ""
-  );
-}
-
-async function getContratoActivo(): Promise<ContratoActivo | null> {
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("contratos")
-      .select("id, nombre, entidad, objeto_contractual, obligaciones")
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error al consultar contrato:", error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error al consultar contrato:", error);
-    return null;
-  }
-}
-
 export default async function RegistrarActividadPage() {
-  const contrato = await getContratoActivo();
+  const contrato = await getContratoActivoAnalisis();
 
   if (!contrato || !contratoEstaCompleto(contrato)) {
     redirect("/mi-contrato");

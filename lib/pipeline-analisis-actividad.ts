@@ -1,11 +1,16 @@
 import { analizarActividad } from "@/lib/analizar-actividad";
 import { corregirOrtografiaCamposPresentacion } from "@/lib/correccion-ortografica-presentacion";
+import { type ContratoActivoAnalisis } from "@/lib/contrato-activo";
 import { getConfiguracionIA, toConfiguracionIAContext } from "@/lib/configuracion-ia";
 import { combinarTextoReglasConfiguracion } from "@/lib/configuracion-ia";
 import { aplicarReglasNoExpandirRedaccion } from "@/lib/reglas-configuracion-ia-redaccion";
 import { regenerarRedaccionActividad } from "@/lib/regenerar-redaccion-actividad";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalisisActividadResult } from "@/types/analisis-actividad";
+
+export {
+  contratoEstaCompleto,
+  getContratoActivoAnalisis as obtenerContratoActivo,
+} from "@/lib/contrato-activo";
 
 /**
  * Campos de `actividades` derivados del pipeline IA (OpenAI + validación de obligación).
@@ -24,44 +29,15 @@ export const CAMPOS_DERIVADOS_IA = [
 
 export type CampoDerivadoIa = (typeof CAMPOS_DERIVADOS_IA)[number];
 
-export type ContratoActivo = {
-  id: string;
-  nombre: string;
-  entidad: string;
-  objeto_contractual: string;
-  obligaciones: string;
-};
-
-export function contratoEstaCompleto(contrato: ContratoActivo): boolean {
-  return (
-    contrato.nombre.trim() !== "" &&
-    contrato.entidad.trim() !== "" &&
-    contrato.objeto_contractual.trim() !== "" &&
-    contrato.obligaciones.trim() !== ""
-  );
-}
-
-export async function obtenerContratoActivo(
-  supabase: SupabaseClient
-): Promise<ContratoActivo | null> {
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("id, nombre, entidad, objeto_contractual, obligaciones")
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-}
+export type ContratoActivo = ContratoActivoAnalisis;
 
 export async function ejecutarAnalisisActividad(
   contrato: ContratoActivo,
   actividadOriginal: string
 ): Promise<AnalisisActividadResult> {
-  const configuracion = toConfiguracionIAContext(await getConfiguracionIA().catch(() => null));
+  const configuracion = toConfiguracionIAContext(
+    await getConfiguracionIA(contrato.id).catch(() => null)
+  );
 
   return analizarActividad({
     nombre: contrato.nombre,
@@ -88,7 +64,9 @@ export async function regenerarRedaccionActividadParaPresentacion(
   actividadOriginal: string,
   analisisBase: AnalisisActividadResult
 ): Promise<AnalisisActividadResult> {
-  const configuracion = toConfiguracionIAContext(await getConfiguracionIA().catch(() => null));
+  const configuracion = toConfiguracionIAContext(
+    await getConfiguracionIA(contrato.id).catch(() => null)
+  );
   const regenerada = await regenerarRedaccionActividad(
     contrato,
     actividadOriginal,

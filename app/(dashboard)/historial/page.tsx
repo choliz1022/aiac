@@ -1,5 +1,6 @@
 import HistorialActividades from "@/components/historial-actividades";
 import Link from "next/link";
+import { getContratoActivoId } from "@/lib/contrato-activo";
 import { normalizarConteoEvidenciasRelacion } from "@/lib/evidencias";
 import { AUDITORIA_OBLIGACIONES_HREF } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -14,12 +15,19 @@ async function getActividades(): Promise<{
   error: string | null;
 }> {
   try {
+    const contratoId = await getContratoActivoId();
+
+    if (!contratoId) {
+      return { actividades: [], error: null };
+    }
+
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("actividades")
       .select(
         "id, contrato_id, fecha, actividad_original, tipo_actividad_detectada, proyecto_detectado, obligacion_detectada, clasificacion_manual, puntaje_clasificacion, redaccion_ia, resumen_ia, palabras_clave, created_at, actividad_evidencias(count)"
       )
+      .eq("contrato_id", contratoId)
       .order("fecha", { ascending: false });
 
     if (error) {

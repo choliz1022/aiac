@@ -4,6 +4,7 @@ import {
   parseObligacionesContrato,
   resolverObligacionExactaContrato,
 } from "@/lib/clasificar-obligacion";
+import { getContratoActivo, getContratoActivoId } from "@/lib/contrato-activo";
 import { createClient } from "@/lib/supabase/server";
 
 export type CorregirClasificacionActividadInput = {
@@ -18,18 +19,13 @@ export type CorregirClasificacionActividadResult =
   | { success: false; error: string };
 
 async function getObligacionesContratoTexto(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("obligaciones")
-    .limit(1)
-    .maybeSingle();
+  const contrato = await getContratoActivo();
 
-  if (error || !data?.obligaciones?.trim()) {
+  if (!contrato?.obligaciones?.trim()) {
     return null;
   }
 
-  return data.obligaciones;
+  return contrato.obligaciones;
 }
 
 export async function corregirClasificacionActividad(
@@ -54,6 +50,15 @@ export async function corregirClasificacionActividad(
 
     if (!tipoActividadDetectada) {
       return { success: false, error: "El tipo de actividad detectada es obligatorio." };
+    }
+
+    const contratoActivoId = await getContratoActivoId();
+
+    if (!contratoActivoId) {
+      return {
+        success: false,
+        error: "No hay un contrato activo configurado.",
+      };
     }
 
     const obligacionesTexto = await getObligacionesContratoTexto();
@@ -89,6 +94,7 @@ export async function corregirClasificacionActividad(
         puntaje_clasificacion: 100,
       })
       .eq("id", input.actividadId)
+      .eq("contrato_id", contratoActivoId)
       .select("id")
       .maybeSingle();
 

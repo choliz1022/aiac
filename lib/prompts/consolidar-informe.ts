@@ -23,18 +23,15 @@ IMPORTANTE:
 
 MODELO DE CLASIFICACIÓN (dos niveles):
 
-Nivel 1 — Ecosistema (NO es criterio de consolidación):
-- SIRCI
-- SIGMP
-- Bus-Estación
+Nivel 1 — Categoría amplia o ecosistema (NO es criterio de consolidación):
+Contexto organizacional, plataforma o área general.
 
 Nivel 2 — Frente de trabajo (SÍ es criterio de consolidación, pero no suficiente por sí solo):
-Ejemplos SIRCI: FET, Audio Zonal, FMS, BCA-PAT, PIP, Medidores compartidos, Interventoría SIRCI, Estudios de mercado, Otrosí 16, Otrosí 20, Otrosí 21, Otrosí 22, Otrosí 26, Patios, Flota, Firmware, MarcoPolo.
-Ejemplos SIGMP: Puertas automáticas, ITS de puertas, Sensorica, Audio en estaciones, Audio en puertas, Interventoría de puertas, Pilotos, Pruebas de puertas.
+Módulo, entregable, proceso, componente o proyecto técnico concreto.
 
 REGLA PRINCIPAL:
-Pertenecer al mismo ecosistema NO implica consolidación.
-SIRCI, SIGMP e ITS son ecosistemas, NO frentes de trabajo.
+Pertenecer a la misma categoría amplia NO implica consolidación.
+Un ecosistema o plataforma NO sustituye al frente de trabajo.
 
 REGLA DE CONSOLIDACIÓN:
 Dos actividades solo pueden agruparse si cumplen AMBAS condiciones:
@@ -53,23 +50,18 @@ Si la respuesta es NO, NO agrupar.
 NO usar como criterio principal:
 - contrato
 - obligación contractual
-- SIRCI
-- SIGMP
-- ITS
-- plataforma tecnológica
+- siglas de ecosistema o plataforma genérica
+- categorías amplias
 - ecosistema tecnológico
 
 Ejemplos CORRECTOS (agrupar):
-- Elaboración estudio BCA-PAT + Continuación estudio BCA-PAT (mismo frente BCA-PAT + mismo estudio)
-- Revisión FET + Ajuste FET + Proyección FET (mismo frente FET + mismo proceso FET)
+- Elaboración estudio componente ALPHA + Continuación estudio componente ALPHA (mismo frente + mismo estudio)
+- Revisión proyección presupuestal + Ajuste proyección presupuestal (mismo frente + mismo proceso)
 
-Ejemplos INCORRECTOS (NO agrupar aunque compartan ecosistema SIRCI):
-- Audio Zonal + FET
-- FET + BCA-PAT
-- Estudio de mercado + visita a fabricante
-- Medidores compartidos + Audio Zonal
-- Visita MarcoPolo BCA-PAT + Estudio de mercado Otrosí 26
-- actividades agrupadas solo porque mencionan SIRCI, SIGMP o ITS
+Ejemplos INCORRECTOS (NO agrupar aunque compartan categoría amplia):
+- Módulo de reportes + componente ALPHA
+- Estudio de mercado + visita a contratista
+- actividades agrupadas solo porque mencionan la misma sigla o ecosistema
 
 Regla conservadora:
 Si hay duda, deja la actividad sola.
@@ -81,9 +73,9 @@ antes que
 
 Reglas operativas:
 - asignar cada actividad a un solo grupo
-- usar "frente" como nombre del frente de trabajo específico (nivel 2), NO del ecosistema
-- NO usar SIRCI, SIGMP ni ITS como nombre de frente
-- proyecto_detectado NO es criterio automático si solo refleja ecosistema general
+- usar "frente" como nombre del frente de trabajo específico (nivel 2), NO de la categoría amplia
+- NO usar siglas de ecosistema ni categorías amplias como nombre de frente
+- proyecto_detectado NO es criterio automático si solo refleja categoría general
 - incluir todos los IDs en algún grupo
 
 Si recibes contexto técnico del contrato:
@@ -139,12 +131,12 @@ ${contextoTecnicoTexto}Actividades del período:
 ${actividadesTexto}
 
 Instrucciones de agrupación:
-1. Identifica el frente de trabajo (nivel 2) de cada actividad, no el ecosistema.
+1. Identifica el frente de trabajo (nivel 2) de cada actividad, no la categoría amplia.
 2. Si hay contexto técnico, úsalo para clasificar ecosistemas y frentes antes de agrupar.
 3. Agrupa solo si comparten el mismo frente Y el mismo documento, entregable, proyecto específico o proceso específico.
-4. NO agrupes por SIRCI, SIGMP, ITS, plataforma o ecosistema tecnológico.
-5. NO uses SIRCI, SIGMP ni ITS como nombre de frente.
-6. NO agrupes frentes distintos aunque pertenezcan al mismo ecosistema.
+4. NO agrupes por siglas de ecosistema, plataforma o categoría amplia.
+5. NO uses categorías amplias como nombre de frente.
+6. NO agrupes frentes distintos aunque pertenezcan a la misma categoría amplia.
 7. Antes de agrupar responde: "¿Estas actividades pertenecen al mismo frente y producirían el mismo entregable?"
 8. Si hay duda, deja la actividad sola.
 9. NO redactes texto consolidado.
